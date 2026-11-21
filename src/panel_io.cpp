@@ -51,6 +51,7 @@ Inputs Panel::readInputs() {
   in.scram = scramPressed;
   scramPressed = false;
   interrupts();
+  if (digitalRead(PIN_SCRAM) == LOW) in.scram = true;  // held button keeps SCRAM asserted
 
   const uint32_t now = millis();
   const bool raw = digitalRead(PIN_RESET) == LOW;
