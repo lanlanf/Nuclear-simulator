@@ -2,6 +2,9 @@
 // Physics runs in fixed 10 ms steps from an accumulator; serial output at 10 Hz,
 // OLED at 5 Hz. Units: time s (ms for timers), power normalized, rho $ on serial.
 #include <Arduino.h>
+#include <avr/dtostrf.h>
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +36,26 @@ static char line[32];
 static uint8_t lineLen = 0;
 static uint32_t lastMs = 0, accMs = 0, lastPrintMs = 0, lastDrawMs = 0;
 
+// Drops the line if the USB TX buffer can't take it whole; never waits on the host.
+static void sendLine(const char* buf, int len) {
+  if (len <= 0 || Serial.availableForWrite() < len) return;
+  Serial.write(reinterpret_cast<const uint8_t*>(buf), len);
+}
+
+static void sendFormatted(char* buf, int size, int n) {
+  if (n < 0) return;
+  if (n >= size) n = size - 1;
+  sendLine(buf, n);
+}
+
+static void sendText(const char* s) { sendLine(s, static_cast<int>(strlen(s))); }
+
+static void sendValue(const char* prefix, float x, int digits) {
+  char v[24], buf[160];
+  dtostrf(x, 0, digits, v);
+  sendFormatted(buf, sizeof buf, snprintf(buf, sizeof buf, "%s%s\r\n", prefix, v));
+}
+
 static void benchmark() {
   const KineticsParams p = keepinU235();
   Kinetics k;
@@ -40,11 +63,11 @@ static void benchmark() {
   const uint32_t start = micros();
   for (int i = 0; i < 1000; ++i) stepImplicit(k, p, 0.0f, 0.0f, DT_S);
   const uint32_t us = micros() - start;
-  Serial.print("# stepImplicit: ");
-  Serial.print(static_cast<float>(us) / 1000.0f, 2);
-  Serial.print(" us per step (n = ");
-  Serial.print(k.n, 6);
-  Serial.println(")");
+  char a[24], b[24], buf[160];
+  dtostrf(static_cast<float>(us) / 1000.0f, 0, 2, a);
+  dtostrf(k.n, 0, 6, b);
+  sendFormatted(buf, sizeof buf,
+                snprintf(buf, sizeof buf, "# stepImplicit: %s us per step (n = %s)\r\n", a, b));
 }
 
 static void handleCommand(const char* cmd) {
@@ -53,10 +76,18 @@ static void handleCommand(const char* cmd) {
     else if (cmd[2] == 't') mode = MODE_TELEPLOT;
     else if (cmd[2] == 'c') {
       mode = MODE_CSV;
-      Serial.println("t,rho,n,T,period,sur,rod,trip");
+      sendText("t,rho,n,T,period,sur,rod,trip\r\n");
     }
   } else if (cmd[0] == 'r' && cmd[1] == ' ') {
-    rhoOverride = strtof(cmd + 2, nullptr) * totalBeta(keepinU235());
+    char* end;
+    const float d = strtof(cmd + 2, &end);
+    const bool parsed = end != cmd + 2;
+    while (*end == ' ' || *end == '\t') ++end;
+    if (!parsed || *end != '\0' || !isfinite(d) || fabsf(d) > 10.0f) {
+      sendText("# error: r needs a finite number in [-10, 10] dollars\r\n");
+      return;
+    }
+    rhoOverride = d * totalBeta(keepinU235());
     overrideOn = true;
   } else if (!strcmp(cmd, "x")) {
     overrideOn = false;
@@ -67,7 +98,7 @@ static void handleCommand(const char* cmd) {
   } else if (!strcmp(cmd, "b")) {
     benchmark();
   } else if (cmd[0] != '\0') {
-    Serial.println("# commands: m p|m c|m t, r <dollars>, x, s, z, b");
+    sendText("# commands: m p|m c|m t, r <dollars>, x, s, z, b\r\n");
   }
 }
 
@@ -85,44 +116,35 @@ static void handleSerialCommands() {
 }
 
 static void printReadings(const Readings& r) {
+  char buf[160];
   if (mode == MODE_CSV) {
-    Serial.print(r.t, 2);
-    Serial.print(',');
-    Serial.print(r.rhoDollars, 5);
-    Serial.print(',');
-    Serial.print(r.n, 8);
-    Serial.print(',');
-    Serial.print(r.T, 3);
-    Serial.print(',');
-    Serial.print(r.period, 2);
-    Serial.print(',');
-    Serial.print(r.sur, 4);
-    Serial.print(',');
-    Serial.print(r.rod, 4);
-    Serial.print(',');
-    Serial.println(r.trips);
+    char t[24], rho[24], n[24], T[24], per[24], sur[24], rod[24];
+    dtostrf(r.t, 0, 2, t);
+    dtostrf(r.rhoDollars, 0, 5, rho);
+    dtostrf(r.n, 0, 8, n);
+    dtostrf(r.T, 0, 3, T);
+    dtostrf(r.period, 0, 2, per);
+    dtostrf(r.sur, 0, 4, sur);
+    dtostrf(r.rod, 0, 4, rod);
+    sendFormatted(buf, sizeof buf,
+                  snprintf(buf, sizeof buf, "%s,%s,%s,%s,%s,%s,%s,%u\r\n", t, rho, n, T, per,
+                           sur, rod, static_cast<unsigned>(r.trips)));
   } else if (mode == MODE_TELEPLOT) {
-    Serial.print(">P:");
-    Serial.println(100.0f * r.n, 3);
-    Serial.print(">logP:");
-    Serial.println(r.logP, 3);
-    Serial.print(">rho:");
-    Serial.println(r.rhoDollars, 4);
-    Serial.print(">T:");
-    Serial.println(r.T, 2);
-    Serial.print(">rod:");
-    Serial.println(100.0f * r.rod, 1);
-    Serial.print(">SUR:");
-    Serial.println(r.sur, 3);
+    sendValue(">P:", 100.0f * r.n, 3);
+    sendValue(">logP:", r.logP, 3);
+    sendValue(">rho:", r.rhoDollars, 4);
+    sendValue(">T:", r.T, 2);
+    sendValue(">rod:", 100.0f * r.rod, 1);
+    sendValue(">SUR:", r.sur, 3);
   } else {
-    Serial.print("P:");
-    Serial.print(100.0f * r.n, 2);
-    Serial.print(",rod:");
-    Serial.print(100.0f * r.rod, 1);
-    Serial.print(",rho_cents:");
-    Serial.print(100.0f * r.rhoDollars, 2);
-    Serial.print(",T_minus_300:");
-    Serial.println(r.T - 300.0f, 2);
+    char p[24], rod[24], rho[24], T[24];
+    dtostrf(100.0f * r.n, 0, 2, p);
+    dtostrf(100.0f * r.rod, 0, 1, rod);
+    dtostrf(100.0f * r.rhoDollars, 0, 2, rho);
+    dtostrf(r.T - 300.0f, 0, 2, T);
+    sendFormatted(buf, sizeof buf,
+                  snprintf(buf, sizeof buf, "P:%s,rod:%s,rho_cents:%s,T_minus_300:%s\r\n", p,
+                           rod, rho, T));
   }
 }
 
@@ -132,9 +154,9 @@ void setup() {
   while (!Serial && millis() - start < 2000) {
   }
   panel.begin();
-  if (!display.begin()) Serial.println("# no OLED found, continuing without it");
+  if (!display.begin()) sendText("# no OLED found, continuing without it\r\n");
   reactor.init();
-  Serial.println("# reactor simulator ready. commands: m p|m c|m t, r <dollars>, x, s, z, b");
+  sendText("# reactor simulator ready. commands: m p|m c|m t, r <dollars>, x, s, z, b\r\n");
   lastMs = millis();
 }
 
