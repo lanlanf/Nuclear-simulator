@@ -29,9 +29,14 @@ bool Reactor::init(const PlantParams& plant, const Setpoints& sp) {
 }
 
 const Readings& Reactor::step(const Inputs& in, float h) {
+  // Non-finite inputs fault-trip; the bad value never reaches state (rods in, Tcool held).
+  const bool inputFault = !isfinite(in.rodDemand) || !isfinite(in.Tcool);
+  const float rodDemand = isfinite(in.rodDemand) ? in.rodDemand : 0.0f;
+  const float Tcool = isfinite(in.Tcool) ? in.Tcool : pp_.Tcool;
+
   if (in.reset && !in.scram && latched_ != 0) {
     // The rod pot must be in too, or the rod would run out on its own after reset.
-    tryReset(latched_, rod_ > in.rodDemand ? rod_ : in.rodDemand, present_);
+    tryReset(latched_, rod_ > rodDemand ? rod_ : rodDemand, present_);
   }
   if (in.scram) latched_ |= TRIP_MANUAL;
 
@@ -40,12 +45,12 @@ const Readings& Reactor::step(const Inputs& in, float h) {
     rod_ = moveRod(rod_, 0.0f, pp_.scramSpeed, h);
     safety_ = moveRod(safety_, 0.0f, pp_.scramSpeed, h);
   } else {
-    rod_ = moveRod(rod_, in.rodDemand, pp_.rodSpeed, h);
+    rod_ = moveRod(rod_, rodDemand, pp_.rodSpeed, h);
     safety_ = moveRod(safety_, 1.0f, pp_.rodSpeed, h);
   }
 
   // 2. Reactivity. Feedback uses T from the previous step.
-  pp_.Tcool = in.Tcool;
+  pp_.Tcool = Tcool;
   const bool testMode = in.overrideOn && latched_ == 0;
   const float rho = testMode ? in.rhoOverride
                              : rodWorth(rod_, pp_) + safetyWorth(safety_, pp_) + feedback(dT_, pp_);
@@ -73,7 +78,7 @@ const Readings& Reactor::step(const Inputs& in, float h) {
 
   // 6. Trips latch.
   uint8_t present = evaluate(r_.n, r_.T, r_.period, r_.rhoDollars, sp_);
-  if (!ok) present |= TRIP_FAULT;
+  if (!ok || inputFault) present |= TRIP_FAULT;
   if (testMode) present &= static_cast<uint8_t>(~OVERRIDE_BYPASS);
   present_ = present;
   latched_ |= present;

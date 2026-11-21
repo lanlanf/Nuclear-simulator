@@ -95,6 +95,51 @@ TEST_CASE("SAFE-02 scram and reset in the same step stays tripped") {
   CHECK(r.step(in, 0.01f).trips == 0);  // plain reset still works
 }
 
+TEST_CASE("SAFE-04 non-finite rod demand fault-trips, rod stays finite") {
+  const float bad[] = {NAN, INFINITY, -INFINITY};
+  for (float v : bad) {
+    Reactor r;
+    REQUIRE(r.init());
+    Inputs in;
+    in.rodDemand = v;
+    const Readings& one = r.step(in, 0.01f);
+    CHECK((one.trips & TRIP_FAULT) != 0);
+    CHECK(isfinite(one.rod));
+    CHECK(isfinite(one.n));
+    const Readings& later = runFor(r, in, 2.0);
+    CHECK(later.rod == 0.0f);
+    CHECK(isfinite(later.n));
+
+    in.reset = true;  // bad input persists: reset refused
+    CHECK((r.step(in, 0.01f).trips & TRIP_FAULT) != 0);
+    in.rodDemand = 0.0f;
+    r.step(in, 0.01f);  // input good again; present fault clears
+    CHECK(r.step(in, 0.01f).trips == 0);
+  }
+}
+
+TEST_CASE("SAFE-05 non-finite coolant temperature fault-trips, T stays finite") {
+  const float bad[] = {NAN, INFINITY, -INFINITY};
+  for (float v : bad) {
+    Reactor r;
+    REQUIRE(r.init());
+    Inputs in;
+    in.Tcool = v;
+    const Readings& one = r.step(in, 0.01f);
+    CHECK((one.trips & TRIP_FAULT) != 0);
+    CHECK(isfinite(one.T));
+    const Readings& later = runFor(r, in, 2.0);
+    CHECK(isfinite(later.T));
+    CHECK(isfinite(later.n));
+  }
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.overrideOn = true;
+  in.Tcool = NAN;
+  CHECK((r.step(in, 0.01f).trips & TRIP_FAULT) != 0);  // FAULT is not bypassed
+}
+
 TEST_CASE("T14 prompt critical trips with finite readings, then shuts down") {
   Reactor r;
   REQUIRE(r.init());
