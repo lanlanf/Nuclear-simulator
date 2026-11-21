@@ -139,6 +139,19 @@ TEST_CASE("T14 prompt critical: substeps keep the denominator positive and n fin
   CHECK(k.n == doctest::Approx(N_MAX));
 }
 
+TEST_CASE("TEST-02 stepImplicit rejects a non-positive denominator") {
+  Kinetics k;
+  initEquilibrium(k, P, 1.0f);
+  CHECK_FALSE(stepImplicit(k, P, 20.0f * totalBeta(P), 0.0f, 0.01f));
+}
+
+TEST_CASE("TEST-02 T14 substeps carry $3") {
+  Kinetics k;
+  initEquilibrium(k, P, 1.0f);
+  CHECK(stepImplicit(k, P, 3.0f * totalBeta(P), 0.0f, 0.01f));
+  CHECK(isfinite(k.n));
+}
+
 TEST_CASE("T16 halving a subcritical rho doubles the source-driven level") {
   const float S = 3.0e-4f;
   const float rho2 = -2.0f * 0.0065f;

@@ -4,13 +4,113 @@
 
 #include "doctest.h"
 #include "instruments.h"
+#include "kinetics.h"
+#include "plant.h"
 #include "protection.h"
 #include "reactor.h"
 
-static const Readings& runFor(Reactor& r, const Inputs& in, double seconds) {
-  const Readings* out = nullptr;
-  for (int i = 0; i < static_cast<int>(seconds / 0.01 + 0.5); ++i) out = &r.step(in, 0.01f);
-  return *out;
+static Readings runFor(Reactor& r, const Inputs& in, double seconds) {
+  REQUIRE(seconds >= 0.01);
+  Readings out = {};
+  for (int i = 0; i < static_cast<int>(seconds / 0.01 + 0.5); ++i) out = r.step(in, 0.01f);
+  return out;
+}
+
+// Rod position in [0.5, 1] adding rho. note: duplicated in test_plant.cpp (two uses).
+static float rodFor(float rho) {
+  const PlantParams pp = defaultPlant();
+  float lo = 0.5f, hi = 1.0f;
+  for (int i = 0; i < 40; ++i) {
+    const float mid = 0.5f * (lo + hi);
+    (rodWorth(mid, pp) < rho ? lo : hi) = mid;
+  }
+  return 0.5f * (lo + hi);
+}
+
+static const Setpoints RELAXED = {10.0f, 1.0e9f, 0.0f, 10.0f, 1.0e9f, 0.0f};
+
+TEST_CASE("TEST-01 facade +$0.2 rod pull settles with feedback") {
+  Reactor r;
+  REQUIRE(r.init(defaultPlant(), RELAXED));
+  Inputs in;
+  in.rodDemand = rodFor(0.2f * 0.0065f);
+  const Readings out = runFor(r, in, 1800.0);
+  CHECK(out.trips == 0);
+  CHECK(out.T - 320.0 == doctest::Approx(26.0).epsilon(0.03));
+  CHECK(out.n == doctest::Approx(1.867).epsilon(0.02));
+  CHECK(fabs(out.rho) < 1.0e-5);
+}
+
+TEST_CASE("TEST-01 facade Tcool 280 overcooling") {
+  Reactor r;
+  REQUIRE(r.init(defaultPlant(), RELAXED));
+  Inputs in;
+  in.Tcool = 280.0f;
+  const Readings out = runFor(r, in, 1800.0);
+  CHECK(out.trips == 0);
+  CHECK(out.n == doctest::Approx(1.333).epsilon(0.02));
+  CHECK(fabs(out.T - 320.0) < 0.05);
+}
+
+TEST_CASE("TEST-02 solver failure latches TRIP_FAULT even in override mode") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.overrideOn = true;
+  in.rhoOverride = 20.0f * totalBeta(keepinU235());
+  const Readings out = r.step(in, 0.01f);
+  CHECK((out.trips & TRIP_FAULT) != 0);
+  CHECK(isfinite(out.n));
+  CHECK((evaluate(NAN, 320.0f, PERIOD_INF, 0.0f, defaultSetpoints()) & TRIP_FAULT) != 0);
+  CHECK((evaluate(1.0f, NAN, PERIOD_INF, 0.0f, defaultSetpoints()) & TRIP_FAULT) != 0);
+}
+
+TEST_CASE("TEST-03 setpoint values are pinned") {
+  const Setpoints s = defaultSetpoints();
+  CHECK(s.powerTrip == 1.20f);
+  CHECK(s.tempTrip == 330.0f);
+  CHECK(s.periodTrip == 10.0f);
+  CHECK(s.powerWarn == 1.05f);
+  CHECK(s.tempWarn == 325.0f);
+  CHECK(s.periodWarn == 30.0f);
+}
+
+TEST_CASE("TEST-03 trip edges") {
+  const Setpoints s = defaultSetpoints();
+  const float I = PERIOD_INF;
+  CHECK(evaluate(1.0f, 320.0f, I, 0.0f, s) == 0);
+  CHECK(evaluate(1.20f, 320.0f, I, 0.0f, s) == 0);
+  CHECK(evaluate(1.2001f, 320.0f, I, 0.0f, s) == TRIP_HIGH_POWER);
+  CHECK(evaluate(1.0f, 330.0f, I, 0.0f, s) == 0);
+  CHECK(evaluate(1.0f, 330.01f, I, 0.0f, s) == TRIP_HIGH_TEMP);
+  CHECK(evaluate(1.0f, 320.0f, 10.0f, 0.0f, s) == 0);
+  CHECK(evaluate(1.0f, 320.0f, 9.99f, 0.0f, s) == TRIP_SHORT_PERIOD);
+  CHECK(evaluate(1.0f, 320.0f, -5.0f, 0.0f, s) == 0);
+  CHECK(evaluate(1.0f, 320.0f, I, 0.999f, s) == 0);
+  CHECK(evaluate(1.0f, 320.0f, I, 1.0f, s) == TRIP_PROMPT_CRIT);
+  CHECK(totalBeta(keepinU235()) == doctest::Approx(0.0065).epsilon(1e-4));
+}
+
+TEST_CASE("TEST-03 warning edges") {
+  const Setpoints s = defaultSetpoints();
+  const float I = PERIOD_INF;
+  CHECK(warnings(1.05f, 320.0f, I, s) == 0);
+  CHECK(warnings(1.0501f, 320.0f, I, s) == WARN_POWER);
+  CHECK(warnings(1.0f, 325.0f, I, s) == 0);
+  CHECK(warnings(1.0f, 325.01f, I, s) == WARN_TEMP);
+  CHECK(warnings(1.0f, 320.0f, 30.0f, s) == 0);
+  CHECK(warnings(1.0f, 320.0f, 29.99f, s) == WARN_PERIOD);
+  CHECK(warnings(1.0f, 320.0f, -5.0f, s) == 0);
+}
+
+TEST_CASE("TEST-03 facade high coolant temperature trips HIGH_TEMP") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.Tcool = 340.0f;  // 325 K never reaches 330: feedback cuts power first
+  const Readings out = runFor(r, in, 300.0);
+  CHECK((out.trips & TRIP_HIGH_TEMP) != 0);
+  CHECK((out.trips & TRIP_FAULT) == 0);
 }
 
 TEST_CASE("T15 period meter recovers a known period") {
