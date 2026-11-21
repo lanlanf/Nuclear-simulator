@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arduino Reactor Control &amp; Simulation Panel — Project Plan</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
+<style>
+  :root { --ink:#1b1f24; --muted:#5b6470; --line:#d9dee5; --bg:#f7f8fa; --card:#fff;
+          --accent:#500000; --ok:#1f7a3a; --warn:#a15c00; --bad:#b3261e; --info:#1d4ed8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--accent); color:#fff; padding:28px 32px; }
+  header h1 { margin:0 0 4px; font-size:1.7rem; }
+  header p { margin:0; opacity:.85; }
+  .layout { display:grid; grid-template-columns:240px 1fr; gap:24px; max-width:1300px; margin:0 auto; padding:24px; }
+  nav { position:sticky; top:16px; align-self:start; font-size:.9rem; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px; max-height:calc(100vh - 32px); overflow:auto; }
+  nav a { display:block; color:var(--ink); text-decoration:none; padding:3px 0; }
+  nav a:hover { color:var(--accent); }
+  main section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px 28px; margin-bottom:20px; }
+  h2 { margin-top:0; color:var(--accent); border-bottom:2px solid var(--line); padding-bottom:6px; }
+  h3 { margin-bottom:6px; }
+  table { border-collapse:collapse; width:100%; margin:10px 0 16px; font-size:.93rem; }
+  th, td { border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top; }
+  th { background:#eef1f5; }
+  code { background:#eef1f5; padding:1px 5px; border-radius:4px; font-size:.9em; }
+  pre { background:#1e2329; color:#e6e6e6; padding:14px 16px; border-radius:6px; overflow:auto; font-size:.86rem; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  .callout { border-left:4px solid var(--info); background:#eef4ff; padding:10px 14px; border-radius:4px; margin:12px 0; }
+  .callout.warn { border-color:var(--warn); background:#fff6e8; }
+  .callout.bad { border-color:var(--bad); background:#fdeeee; }
+  .callout.ok { border-color:var(--ok); background:#ecf7ef; }
+  .tag { display:inline-block; font-size:.75rem; font-weight:600; padding:1px 7px; border-radius:10px; margin-left:4px; }
+  .v { background:#ecf7ef; color:var(--ok); } .e { background:#eef4ff; color:var(--info); } .u { background:#fff6e8; color:var(--warn); }
+  dl.glossary { display:grid; grid-template-columns:220px 1fr; gap:6px 16px; }
+  dl.glossary dt { font-weight:600; }
+  dl.glossary dd { margin:0; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .small { font-size:.88rem; color:var(--muted); }
+  ol.cites li, ul.cites li { word-break:break-all; font-size:.9rem; }
+  @media (max-width:900px) { .layout { grid-template-columns:1fr; } nav { position:static; max-height:none; } dl.glossary, .grid2 { grid-template-columns:1fr; } }
+  @media print { nav { display:none; } .layout { grid-template-columns:1fr; } section { break-inside:avoid-page; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Arduino Nuclear Reactor Control &amp; Simulation Panel</h1>
+  <p>ENGR 217 personal project · Landon Fancher · Plan drafted 2026-11-18</p>
+</header>
+
+<div class="layout">
+<nav>
+  <strong>Contents</strong>
+  <a href="#concept">1. Concept</a>
+  <a href="#glossary">2. Key terms (glossary)</a>
+  <a href="#stiff">3. What “stiff” means</a>
+  <a href="#learn">4. How to learn this</a>
+  <a href="#physics">5. Physics model</a>
+  <a href="#numerics">6. Numerical method</a>
+  <a href="#mcu">7. Microcontroller: capabilities &amp; expectations</a>
+  <a href="#hardware">8. Hardware</a>
+  <a href="#software">9. Software architecture</a>
+  <a href="#validation">10. Validation plan</a>
+  <a href="#phases">11. Build phases</a>
+  <a href="#risks">12. Risks</a>
+  <a href="#prior">13. Prior art</a>
+  <a href="#cites">14. Citations</a>
+  <a href="#unverified">15. Not yet verified</a>
+  <hr>
+  <span class="small"><span class="tag v">V</span> verified from a fetched source<br><span class="tag e">E</span> estimate or arithmetic<br><span class="tag u">U</span> not verified yet</span>
+</nav>
+
+<main>
+
+<!-- 1 -->
+<section id="concept">
+<h2>1. Concept</h2>
+<p>This is a miniature reactor control panel. The reactor physics runs as a <strong>real-time math model on the Arduino itself</strong>, not on a PC.</p>
+<ul>
+  <li><strong>Potentiometer:</strong> sets the control rod position. A rod-worth curve converts that position into reactivity \(\rho\).</li>
+  <li><strong>Arduino:</strong> solves the 6-group point kinetics equations (PKE) plus a temperature feedback model.</li>
+  <li><strong>LEDs:</strong> show the plant state (subcritical, critical, supercritical, warning, SCRAM).</li>
+  <li><strong>Buzzer:</strong> sounds on high power, high temperature or a short period.</li>
+  <li><strong>Servo:</strong> physically shows how far the rods are inserted.</li>
+  <li><strong>SCRAM button:</strong> drives the rods in. The trip latches until you reset it.</li>
+  <li><strong>Serial Plotter / CSV log:</strong> shows power, period, reactivity and temperature live.</li>
+</ul>
+<div class="callout ok"><strong>Headline claim:</strong> six delayed neutron groups and temperature feedback, solved on a microcontroller with a stiffness-aware implicit integrator, and validated against a SciPy reference solution.</div>
+<div class="callout"><strong>Approach:</strong> write and test the C++ math on a PC first, then connect the Arduino. The physics code is shared, so the Arduino runs the exact code you validated (see §9).</div>
+</section>
+
+<!-- 2 -->
+<section id="glossary">
+<h2>2. Key terms (glossary)</h2>
+
+<h3>Reactor physics</h3>
+<dl class="glossary">
+  <dt>Fission</dt><dd>A heavy nucleus (U-235) absorbs a neutron and splits. It releases energy and about 2.4 new neutrons.</dd>
+  <dt>Chain reaction</dt><dd>Neutrons from one fission cause more fissions. Power is proportional to how many neutrons are present.</dd>
+  <dt>Neutron population \(n\)</dt><dd>How many neutrons are in the core. In this model it is normalized so \(n=1\) means 100% power.</dd>
+  <dt>Multiplication factor \(k\)</dt><dd>Neutrons in one generation divided by neutrons in the previous one.</dd>
+  <dt>Subcritical / critical / supercritical</dt><dd>\(k&lt;1\): power falls. \(k=1\): power stays constant. \(k&gt;1\): power rises.</dd>
+  <dt>Reactivity \(\rho\)</dt><dd>\(\rho=(k-1)/k\), how far the core is from critical. Negative is subcritical, 0 is critical, positive is supercritical.</dd>
+  <dt>pcm</dt><dd>“Per cent mille,” \(10^{-5}\) of reactivity. 100 pcm = 0.001.</dd>
+  <dt>Dollar (\(\$\))</dt><dd>Reactivity divided by \(\beta\). \(\$1\) = \(\rho=\beta\approx 0.0065\) = 650 pcm. Operators think in dollars and cents.</dd>
+  <dt>Prompt neutrons</dt><dd>Neutrons released instantly at fission, about 99.35% of them.</dd>
+  <dt>Delayed neutrons</dt><dd>About 0.65% of neutrons, released seconds to a minute later by radioactive fission fragments. <strong>They are what makes a reactor controllable.</strong></dd>
+  <dt>Delayed neutron fraction \(\beta\)</dt><dd>The fraction of neutrons that are delayed: \(\beta\approx 0.0065\) for U-235.</dd>
+  <dt>Precursors \(C_i\)</dt><dd>The fission fragments that later emit delayed neutrons. They are grouped into 6 “groups” by half-life (0.2 s to 56 s).</dd>
+  <dt>Decay constant \(\lambda_i\)</dt><dd>How fast a precursor group decays: \(\lambda=\ln 2/t_{1/2}\).</dd>
+  <dt>Prompt neutron generation time \(\Lambda\)</dt><dd>Average time between one generation of prompt neutrons and the next, about \(10^{-4}\) s in a thermal reactor.</dd>
+  <dt>Point kinetics equations (PKE)</dt><dd>Seven coupled ODEs: one for \(n\) and six for the \(C_i\). They treat the whole core as one point with no spatial shape.</dd>
+  <dt>Prompt critical</dt><dd>\(\rho\ge\beta\) (\(\ge\$1\)). The reactor is critical on prompt neutrons alone, so power rises in milliseconds. This is the dangerous regime (SL-1, Chernobyl).</dd>
+  <dt>Reactor period \(T\)</dt><dd>Time for power to grow by a factor of \(e\) (2.718). Long period = slow and safe; short period = fast and dangerous.</dd>
+  <dt>Startup rate (SUR)</dt><dd>Power growth in decades per minute (DPM): \(\text{SUR}=26.06/T\). Real consoles show it.</dd>
+  <dt>Prompt jump / prompt drop</dt><dd>An almost instant change in power when reactivity steps, before the delayed neutrons catch up. The size of the jump is \(\beta/(\beta-\rho)\).</dd>
+  <dt>Inhour equation</dt><dd>The exact relationship between a reactivity step and the stable period that follows. Used to check the simulator.</dd>
+  <dt>Control rod</dt><dd>Neutron-absorbing rod. Inserting it lowers \(\rho\); withdrawing it raises \(\rho\).</dd>
+  <dt>Rod worth (integral / differential)</dt><dd><em>Integral worth:</em> total reactivity change from moving a rod. <em>Differential worth:</em> reactivity per cm of travel, which is largest at mid-core and produces the S-curve.</dd>
+  <dt>SCRAM</dt><dd>Emergency shutdown that drives all rods in at once.</dd>
+  <dt>Trip / setpoint</dt><dd>An automatic SCRAM that fires when a measurement crosses a limit (high power, high temperature, short period).</dd>
+  <dt>Temperature coefficient \(\alpha_T\)</dt><dd>Reactivity change per kelvin. A negative value means a hotter core loses reactivity, so the reactor self-stabilizes.</dd>
+  <dt>Feedback</dt><dd>The reactor's own state (temperature) changing its reactivity.</dd>
+  <dt>Neutron source \(S\)</dt><dd>A small external neutron supply, so a shut-down reactor still has a measurable neutron level to start up from.</dd>
+  <dt>Annunciator</dt><dd>A panel of labeled alarm lights that latch on until the operator acknowledges them.</dd>
+</dl>
+
+<h3>Math and numerical methods</h3>
+<dl class="glossary">
+  <dt>ODE</dt><dd>Ordinary differential equation: a rule for how a quantity changes over time, \(dy/dt=f(y,t)\).</dd>
+  <dt>Time step \(h\) (or \(\Delta t\))</dt><dd>How far forward in time the solver jumps each step, e.g. 10 ms.</dd>
+  <dt>Explicit (forward) Euler</dt><dd>\(y_{k+1}=y_k+h\,f(y_k)\). Uses the slope at the <em>start</em> of the step. Simple, but can blow up.</dd>
+  <dt>Implicit (backward) Euler</dt><dd>\(y_{k+1}=y_k+h\,f(y_{k+1})\). Uses the slope at the <em>end</em> of the step, so you have to solve for \(y_{k+1}\). Stable for stiff problems.</dd>
+  <dt>RK4</dt><dd>Fourth-order Runge–Kutta, a more accurate explicit method. It is still unstable on stiff problems at large steps.</dd>
+  <dt>Stiff</dt><dd>See <a href="#stiff">§3</a>. A system with both very fast and very slow behavior, which forces explicit methods to take tiny steps.</dd>
+  <dt>Stability</dt><dd>Whether numerical errors die out (stable) or grow without bound (unstable) as you keep stepping.</dd>
+  <dt>Eigenvalue (of an ODE system)</dt><dd>The natural growth or decay rates of the system. A large negative eigenvalue means a very fast decay.</dd>
+  <dt>Order of accuracy / convergence</dt><dd>How the error shrinks as \(h\) shrinks. First order: halving \(h\) halves the error.</dd>
+  <dt>Crank–Nicolson</dt><dd>Averages explicit and implicit Euler. Second-order accurate.</dd>
+  <dt>Prompt jump approximation (PJA)</dt><dd>Sets \(dn/dt\approx0\) to remove the fast part. Accurate below about 0.5$, and breaks down at \$1.</dd>
+  <dt>Radau / BDF</dt><dd>High-accuracy implicit methods that SciPy uses as the reference “truth.”</dd>
+  <dt>Float (32-bit)</dt><dd>Single-precision number with about 7 significant digits. On the Uno R3, <code>double</code> is the same as <code>float</code>.</dd>
+  <dt>EMA filter</dt><dd>Exponential moving average, \(y\leftarrow y+a(x-y)\). Smooths noisy pot readings.</dd>
+</dl>
+
+<h3>Electronics and microcontroller</h3>
+<dl class="glossary">
+  <dt>Microcontroller (MCU)</dt><dd>A small computer on one chip: CPU, memory and I/O pins.</dd>
+  <dt>Clock speed</dt><dd>CPU cycles per second. The R3 runs at 16 MHz, so one cycle is 62.5 ns.</dd>
+  <dt>Flash / SRAM / EEPROM</dt><dd>Flash holds the program. SRAM holds variables while running and is wiped on reset. EEPROM holds small data that survives power-off.</dd>
+  <dt>FPU</dt><dd>Floating-point unit: hardware for decimal math. Without one (R3), float math is done in software and is about 100× slower.</dd>
+  <dt>ADC / <code>analogRead</code></dt><dd>Converts a voltage (0–5 V) to a number (0–1023 at 10-bit).</dd>
+  <dt>PWM</dt><dd>Pulse-width modulation: switching a pin on and off quickly to fake an analog level. Used for LED brightness and servo signals.</dd>
+  <dt>Voltage divider</dt><dd>How a pot works: \(V_\text{out}=V_\text{in}\cdot R_2/(R_1+R_2)\).</dd>
+  <dt>Current-limiting resistor</dt><dd>\(R=(V_{cc}-V_f)/I\), protects the LED and the pin.</dd>
+  <dt>Interrupt / ISR</dt><dd>A hardware signal that pauses the main loop to run a short function, so the SCRAM button is never missed.</dd>
+  <dt>Debounce</dt><dd>Ignoring the rapid on/off chatter of a mechanical button for 20–50 ms.</dd>
+  <dt><code>INPUT_PULLUP</code></dt><dd>Internal resistor that holds a pin HIGH, so a button to ground reads LOW when pressed.</dd>
+  <dt>I2C</dt><dd>Two-wire bus (SDA/SCL) for displays and sensors.</dd>
+  <dt>Baud</dt><dd>Serial bits per second. 115200 baud is about 11.5 KB/s.</dd>
+  <dt>Brownout</dt><dd>A supply-voltage dip (e.g., servo stall current) that resets the MCU.</dd>
+  <dt>Latch</dt><dd>Stays in a state (tripped) until it is explicitly reset.</dd>
+  <dt>Fixed timestep / non-blocking loop</dt><dd>Run the physics every exactly 10 ms using <code>millis()</code>, never <code>delay()</code>.</dd>
+</dl>
+</section>
+
+<!-- 3 -->
+<section id="stiff">
+<h2>3. What “stiff” means, and why it matters here</h2>
+<p>A system is <strong>stiff</strong> when it contains processes on <strong>very different time scales</strong>, and the fast one has already died out but still controls which step sizes are stable.</p>
+<p>The reactor has two clocks:</p>
+<ul>
+  <li><strong>Prompt neutrons</strong> react in about \(\Lambda=10^{-4}\) s. Their rate is \((\beta-\rho)/\Lambda\approx 65\ \text{s}^{-1}\), a time scale of about 15 ms.</li>
+  <li><strong>Delayed precursors</strong> evolve over 0.2–80 s. The slowest rate is \(0.0124\ \text{s}^{-1}\).</li>
+</ul>
+<p>The rates differ by more than \(10^4\). You only care about the slow behavior, which is what you see on the plot, but explicit methods must still take steps small enough to follow the fast part. Otherwise they blow up.</p>
+
+<h3>Tiny worked example</h3>
+<p>Take \(dy/dt=-1000\,y\) with \(y_0=1\), whose true solution decays to 0 almost instantly. Use \(h=0.01\) s:</p>
+<div class="grid2">
+<div class="callout bad"><strong>Explicit Euler</strong><br>
+\(y_{k+1}=y_k+h(-1000y_k)=(1-10)\,y_k=-9\,y_k\)<br>
+\(1,\,-9,\,81,\,-729,\dots\) <strong>explodes</strong>.</div>
+<div class="callout ok"><strong>Implicit Euler</strong><br>
+\(y_{k+1}=y_k+h(-1000y_{k+1})\Rightarrow y_{k+1}=\dfrac{y_k}{1+10}\)<br>
+\(1,\,0.091,\,0.0083,\dots\) <strong>decays correctly</strong>.</div>
+</div>
+<p>For explicit Euler the stability rule is \(h&lt;2/|\text{fastest rate}|\). For this reactor that means</p>
+\[\Delta t&lt;\frac{2\Lambda}{\beta-\rho}\approx 31\text{ ms at }\rho=0\]
+<p>That limit shrinks to about 5 ms right after a −$5 SCRAM. Implicit Euler has <strong>no step-size limit</strong>, which is why this project uses it. Running explicit Euler at 40 ms on purpose and watching it fail makes a good figure for your report (test V7).</p>
+</section>
+
+<!-- 4 -->
+<section id="learn">
+<h2>4. How to learn this</h2>
+<p>All resources below are free. Work through them in this order; each step lines up with a build phase in §11.</p>
+<table>
+<tr><th>#</th><th>Read / watch</th><th>Why</th><th>Level</th><th>Build phase</th></tr>
+<tr><td>1</td><td><a href="https://ocw.mit.edu/courses/22-01-introduction-to-nuclear-engineering-and-ionizing-radiation-fall-2016/video_galleries/lecture-videos/">MIT 22.01 lecture videos</a> (Prof. Michael Short): Lec 16 <em>Reactor Construction &amp; Operation</em> and Lec 20 <em>How Nuclear Energy Works</em> <span class="tag v">V</span></td><td>The big picture of what a reactor does</td><td>Intro</td><td>Before anything</td></tr>
+<tr><td>2</td><td><a href="https://web.archive.org/web/20170914172136/https://energy.gov/sites/prod/files/2013/06/f2/h1019v2.pdf">DOE Fundamentals Handbook, Nuclear Physics &amp; Reactor Theory Vol. 2</a> (DOE-HDBK-1019/2-93): Module 3 <em>Reactivity Coefficients</em> and <em>Control Rods</em>, Module 4 <em>Reactor Kinetics</em> <span class="tag v">V</span> (contents checked)</td><td>Written for Navy and plant operator training. It covers \(k\), \(\rho\), delayed neutrons, period, SUR, rod worth and coefficients. <strong>This is the best single match for this project.</strong></td><td>Intro → Int.</td><td>Physics model (§5)</td></tr>
+<tr><td>3</td><td><a href="https://www.energy.gov/sites/default/files/2026-04/DOE-HDBK-1019-93_VOL1.pdf">DOE Handbook Vol. 1</a> (DOE-HDBK-1019/1-93), Module 1 and Module 2 “Prompt and Delayed Neutrons” <span class="tag v">V</span></td><td>Fission, neutron interactions and cross sections, if you need background</td><td>Intro</td><td>As needed</td></tr>
+<tr><td>4</td><td><a href="https://ocw.mit.edu/courses/22-05-neutron-science-and-reactor-physics-fall-2009/pages/lecture-notes/">MIT 22.05 lecture notes</a> (Prof. Benoit Forget): Lec 12 <em>Kinetics Approximation</em>, Lec 13 <em>Delayed Neutrons / Inhour</em>, Lec 14 <em>Prompt Jump</em> <span class="tag v">V</span></td><td>Derives the PKE, the inhour equation and the prompt jump: the exact equations you will code</td><td>Intermediate</td><td>Writing the solver</td></tr>
+<tr><td>5</td><td><a href="https://en.wikipedia.org/wiki/Stiff_equation">Wikipedia: Stiff equation</a> <span class="tag v">V</span></td><td>Explicit vs implicit stability and A-stability. Start with the worked example.</td><td>Intermediate</td><td>Numerical method (§6)</td></tr>
+<tr><td>6</td><td><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html">SciPy <code>solve_ivp</code> docs</a> <span class="tag v">V</span></td><td>The docs say: use Radau/BDF for stiff problems. You'll use it to build the Python reference.</td><td>Intermediate</td><td>Validation</td></tr>
+<tr><td>7</td><td>MIT 22.05 Lec 20 <em>Control Rods</em> and Lec 23 <em>Reactivity Feedback</em> (same link as #4) <span class="tag v">V</span></td><td>Rod worth S-curve and temperature feedback</td><td>Intermediate</td><td>Adding rods + feedback</td></tr>
+<tr><td>8</td><td><a href="https://docs.arduino.cc/built-in-examples/digital/BlinkWithoutDelay/">Blink Without Delay</a> <span class="tag v">V</span>, <a href="https://docs.arduino.cc/built-in-examples/basics/AnalogReadSerial/">AnalogReadSerial</a>, <a href="https://docs.arduino.cc/built-in-examples/analog/Smoothing/">Smoothing</a>, <a href="https://docs.arduino.cc/built-in-examples/digital/Debounce/">Debounce</a></td><td>A fixed-timestep loop, the pot, filtering and the SCRAM button</td><td>Intro</td><td>Hooking up the Arduino</td></tr>
+<tr><td>9</td><td><a href="https://ocw.mit.edu/courses/22-05-neutron-science-and-reactor-physics-fall-2009/">MIT 22.05 full course</a> <span class="tag v">V</span> and <a href="https://ocw.mit.edu/courses/22-01-introduction-to-nuclear-engineering-and-ionizing-radiation-fall-2016/">MIT 22.01 full course</a> <span class="tag v">V</span></td><td>Problem sets for practice</td><td>Intro → Int.</td><td>Ongoing</td></tr>
+</table>
+<p><strong>Textbooks</strong> (TAMU library):</p>
+<ul>
+  <li>Lamarsh &amp; Baratta, <em>Introduction to Nuclear Engineering</em>, ch. 7 (reactor kinetics). Use it to confirm the 6-group table.</li>
+  <li>Lewis, <em>Fundamentals of Nuclear Reactor Physics</em>, ch. 5 (kinetics) and ch. 9 (feedback). MIT 22.05 follows this book.</li>
+  <li>Duderstadt &amp; Hamilton, <em>Nuclear Reactor Analysis</em>, ch. 6.</li>
+</ul>
+<div class="callout"><strong>Minimum to start coding:</strong> resources #2 (Module 4) and #4 (Lec 12–14). That covers everything in §5–§6. Read #5 before the numerical method.</div>
+<div class="callout warn"><strong>Ask:</strong> your NUEN advisor or a professor which TAMU course covers reactor kinetics. They may also be willing to look over your validation plots, which would help your recommendation letters.</div>
+</section>
+
+<!-- 5 -->
+<section id="physics">
+<h2>5. Physics model</h2>
+
+<h3>5.1 Point kinetics (6 delayed groups)</h3>
+\[\frac{dn}{dt}=\frac{\rho-\beta}{\Lambda}n+\sum_{i=1}^{6}\lambda_iC_i+S,\qquad \frac{dC_i}{dt}=\frac{\beta_i}{\Lambda}n-\lambda_iC_i\]
+<table>
+<tr><th>Symbol</th><th>Meaning</th><th>Value / units</th></tr>
+<tr><td>\(n\)</td><td>Neutron population, normalized as power (\(n_0=1\) = 100%)</td><td>—</td></tr>
+<tr><td>\(C_i\)</td><td>Precursor concentration, group \(i\)</td><td>same units as \(n\)</td></tr>
+<tr><td>\(\rho\)</td><td>Reactivity</td><td>pcm, or dollars = \(\rho/\beta\)</td></tr>
+<tr><td>\(\beta\)</td><td>Delayed neutron fraction, U-235 thermal</td><td>0.0065 [R2][R12] <span class="tag v">V</span></td></tr>
+<tr><td>\(\Lambda\)</td><td>Prompt neutron generation time</td><td>\(10^{-4}\) s (DOE: \(10^{-4}\)–\(10^{-5}\) s for thermal reactors) [R2][R12] <span class="tag v">V</span></td></tr>
+<tr><td>\(S\)</td><td>External source</td><td>\(\approx3\times10^{-4}\) s⁻¹, so shutdown power is about \(10^{-6}\) at −5 dollars (\(n_{ss}=-S\Lambda/\rho\))</td></tr>
+</table>
+<p><strong>Equilibrium start:</strong> \(C_{i0}=\beta_i n_0/(\lambda_i\Lambda)\). With \(\rho=0\) and \(S=0\), \(n\) must stay constant (test V1).</p>
+
+<h3>5.2 Keepin 6-group data, U-235 thermal fission [R3][R4][R12]</h3>
+<table>
+<tr><th>Group</th><th>\(t_{1/2}\) (s)</th><th>\(\lambda_i\) (s⁻¹)</th><th>Relative abundance</th><th>\(\beta_i\)</th></tr>
+<tr><td>1</td><td>55.72</td><td>0.0124</td><td>0.033</td><td>0.000215</td></tr>
+<tr><td>2</td><td>22.72</td><td>0.0305</td><td>0.219</td><td>0.001424</td></tr>
+<tr><td>3</td><td>6.22</td><td>0.111</td><td>0.196</td><td>0.001274</td></tr>
+<tr><td>4</td><td>2.30</td><td>0.301</td><td>0.395</td><td>0.002568</td></tr>
+<tr><td>5</td><td>0.610</td><td>1.14</td><td>0.115</td><td>0.000748</td></tr>
+<tr><td>6</td><td>0.230</td><td>3.01</td><td>0.042</td><td>0.000273</td></tr>
+<tr><th>Total</th><td></td><td></td><td>1.000</td><th>0.0065</th></tr>
+</table>
+<div class="callout ok"><span class="tag v">V</span> <strong>Verified</strong> against DOE-HDBK-1019/1-93, Module NP-02, Table 3 (p. 30) [R12]. DOE lists the same half-lives and fractions rounded to 2–3 figures (e.g. 0.00021 vs 0.000215), total 0.0065. Computing \(\lambda=\ln2/t_{1/2}\) from DOE's half-lives gives the same \(\lambda_i\) except group 3 (6.2 s → 0.112 vs Keepin's 6.22 s → 0.111), and Vol. 2 (NP-04 Table 1) lists 6.22 s exactly, matching Keepin [R5]. DOE's 12.5 s mean precursor decay time also agrees with \(\sum(\beta_i/\lambda_i)/\beta\approx13\) s.</div>
+<div class="callout"><strong>Start simpler:</strong> use 1 delayed group with \(\beta=0.0065\) and \(\lambda_\text{eff}\approx0.08\ \text{s}^{-1}\), then upgrade to 6.</div>
+
+<h3>5.3 Rod position → reactivity (S-curve) [R5]</h3>
+\[\rho_\text{rod}(x)=\rho_w\left[\frac{x}{H}-\frac{1}{2\pi}\sin\frac{2\pi x}{H}\right]-\rho_\text{crit}\]
+<ul>
+  <li>\(x/H=\text{pot}/1023\), smoothed with an EMA.</li>
+  <li>Total rod worth \(\rho_w\approx\) 2.2 dollars.</li>
+  <li>Choose \(\rho_\text{crit}\) so the reactor is critical at about 50% withdrawn. Full withdrawal then goes just past prompt critical.</li>
+  <li><strong>Rate-limit the rod</strong> to about 2%/s, like a real rod drive. DOE says rod speed is limited to soften a continuous-withdrawal accident [R5].</li>
+  <li><strong>The S shape is verified</strong> [R5] (bell-shaped differential worth, S-shaped integral worth). The sine formula is a fit, within 3% of total worth against DOE Example 3.</li>
+  <li><strong>Add a safety rod bank</strong> worth about 4 dollars, driven by SCRAM. The regulating rod alone only reaches −1.1 dollars (≈ −0.7% Δk/k), below DOE's typical 1–5% shutdown margin. Both banks give ≈ −3.3%. Bickel's FSAR example credits about 5% shutdown margin (k ≈ 0.95) [R13]. To match it, raise the safety bank to about 6.6 dollars (total ≈ −5%).</li>
+</ul>
+
+<h3>5.4 Temperature feedback (one lumped node)</h3>
+\[mc\frac{dT}{dt}=P-h(T-T_\text{cool}),\qquad \rho=\rho_\text{rod}+\alpha_T(T-T_\text{ref}),\quad \alpha_T&lt;0\]
+<table>
+<tr><th>Constant</th><th>Demo value</th><th>Note</th></tr>
+<tr><td>\(T_\text{cool}\)</td><td>290</td><td>Coolant temperature</td></tr>
+<tr><td>\(h\)</td><td>1/30</td><td>Gives a 30 K rise at \(P=1\)</td></tr>
+<tr><td>\(T_\text{ref}\)</td><td>320</td><td>\(=T_\text{cool}+P_0/h\), so feedback is zero at the starting state</td></tr>
+<tr><td>\(mc\)</td><td>5</td><td>Time constant \(mc/h\approx150\) s, slow enough to watch live</td></tr>
+<tr><td>\(\alpha_T\)</td><td>−5 pcm/K</td><td>Demo value. DOE's worked example uses −8.2 pcm/°F (≈ −15 pcm/K) for a moderator coefficient [R5]</td></tr>
+</table>
+<p>Expected result: a +0.2 dollar rod pull settles about 26 K hotter at about 1.9× power. The reactor stabilizes itself.</p>
+<div class="callout ok"><span class="tag v">V</span> <strong>Checked against Bickel, Module 10 [R13].</strong> The structure matches his coupled model (slide 16): \(\delta\rho_\text{net}=\rho+\frac{\partial\rho}{\partial T_f}\Delta T_f+\frac{\partial\rho}{\partial T_\text{avg}}\Delta T_\text{avg}\) with a fuel heat balance \(\tau_f\,dT_f/dt=P-(T_f-T_\text{avg})/R_{f\text{-}c}\). This plan lumps fuel and coolant into one node.</div>
+<table>
+<tr><th>Quantity</th><th>Real plant [R13]</th><th>This demo</th></tr>
+<tr><td>Doppler (fuel) coefficient</td><td>Always negative. Diablo Canyon −1.4 to −2.6 pcm/°F (≈ −2.5 to −4.7 pcm/K)</td><td>Lumped into \(\alpha_T\)</td></tr>
+<tr><td>Moderator temperature coefficient</td><td>Example −25 pcm/°F (≈ −45 pcm/K). A PWR's MTC can be slightly positive early in core life with high soluble boron</td><td>Lumped into \(\alpha_T\)</td></tr>
+<tr><td>MTC typical range</td><td>0 to −80 pcm/°C (= pcm/K). It must be non-positive at significant power (NRC SRP 4.3) [R14][R15]</td><td>−5 pcm/K is inside it</td></tr>
+<tr><td>Total power coefficient</td><td>Diablo Canyon −11 to −15 pcm/% power early in life, −20 to −31 late in life</td><td>−1.5 pcm/% power</td></tr>
+<tr><td>Power defect, 0 → 100%</td><td>About 2000–2250 pcm (≈ 3 dollars)</td><td>150 pcm (≈ 0.23 dollars)</td></tr>
+<tr><td>Fuel temperature lag</td><td>\(\tau_f\approx\) 3–5 s</td><td>One node, 150 s</td></tr>
+</table>
+<ul>
+  <li><strong>The demo is deliberately about 10× gentler.</strong> A real 3-dollar power defect is more than the 2.2-dollar rod worth, so the rod could never bring the reactor to full power. Real PWRs also use soluble boron to cover it. Say this in the report.</li>
+  <li><strong>Something you can show:</strong> at zero power the core is 30 K cooler, which adds +150 pcm. The reactor therefore goes critical at about 45% withdrawn during startup, compared with 50% at full power.</li>
+  <li><strong>Overcooling demo</strong> (use the optional coolant pot as \(T_\text{cool}\)): lower \(T_\text{cool}\) by 10 K with the rod fixed. The colder core gains reactivity, so power rises until \(T\) is back at \(T_\text{ref}\), at \(P=1+10/30\approx1.33\). This is why the MTC has a <em>lower</em> limit, typically about −80 pcm/°C: in a main steam line break the coolant cools quickly, and a strongly negative MTC turns that into a large positive reactivity insertion [R14].</li>
+  <li><strong>Expected dynamics</strong> (slide 17): a reactor at power is highly damped. After a small step, power rises, overshoots, then settles where the net \(\rho=0\). My rough frequency-response estimate predicted 10–20% overshoot <span class="tag e">E</span>. The SciPy reference and the C++ model both show a much larger first peak. A +$0.2 pull reaches \(n\approx3.4\) about 60 s in, which is ~80% above the final 1.87. Power is then within 2% of its final value by about 9 min, with no sustained ringing. On the real panel, a +$0.2 pull from full power therefore trips on high power (1.20).</li>
+  <li><strong>Optional upgrade:</strong> Bickel's two-node model, with a fast fuel node (\(\tau_f\approx4\) s, Doppler) and a slow coolant node (MTC).</li>
+</ul>
+
+<h3>5.5 Behaviors to demonstrate [R2][R6]</h3>
+<table>
+<tr><th>Regime</th><th>Reactivity</th><th>Expected behavior</th></tr>
+<tr><td>Subcritical</td><td>&lt; 0</td><td>Prompt drop, then a decay that approaches about a −80 s period</td></tr>
+<tr><td>Critical</td><td>0</td><td>Constant power</td></tr>
+<tr><td>Supercritical</td><td>+0.1 dollar</td><td>Period ≈ 98 s (exact inhour). One group with DOE's power-rising \(\lambda_\text{eff}=0.1\) gives 90 s [R5]</td></tr>
+<tr><td>Supercritical</td><td>+0.5 dollar</td><td>Prompt jump about 2×, then period ≈ 5.8 s (exact inhour). One group gives 10–12.5 s, which is too slow</td></tr>
+<tr><td>Prompt critical</td><td>≥ 1 dollar</td><td>\(T\approx\Lambda/(\rho-\beta)\), milliseconds. Auto-trip and clamp \(n\)</td></tr>
+<tr><td>SCRAM</td><td>→ −5 dollars</td><td>Drop to \(\beta/(\beta-\rho)\) of power, then the ~80 s tail</td></tr>
+</table>
+<p><strong>Benchmark</strong> [R6]: a 0.1% δk/k insertion gives a 57 s period, versus 0.1 s if there were no delayed neutrons.<br>
+<strong>Instrument:</strong> \(\text{SUR}=26.06/T\) in DPM (\(26.06=60/\ln10\)).</p>
+</section>
+
+<!-- 6 -->
+<section id="numerics">
+<h2>6. Numerical method</h2>
+<p><strong>Chosen: backward (implicit) Euler with closed-form elimination.</strong> It is unconditionally stable, needs no matrix solve, and costs about 60 flops per step.</p>
+<ol>
+  <li>\(C_i^{k+1}=\dfrac{C_i^k+h\beta_in^{k+1}/\Lambda}{1+h\lambda_i}\)</li>
+  <li>Substitute into the \(n\) equation, which leaves one scalar equation:
+  \[n^{k+1}=\frac{n^k+h\sum_i\dfrac{\lambda_iC_i^k}{1+h\lambda_i}+hS}{1-\dfrac{h(\rho-\beta)}{\Lambda}-\dfrac{h^2}{\Lambda}\sum_i\dfrac{\lambda_i\beta_i}{1+h\lambda_i}}\]</li>
+  <li>Update each \(C_i^{k+1}\) using the new \(n^{k+1}\).</li>
+</ol>
+<table>
+<tr><th>Method</th><th>Stable at 10 ms?</th><th>Use in this project</th></tr>
+<tr><td>Explicit Euler</td><td>No (needs &lt; 31 ms, ~5 ms after a SCRAM)</td><td>Run it on purpose to show the instability (V7)</td></tr>
+<tr><td>RK4</td><td>No (only about 1.4× better)</td><td>Skip</td></tr>
+<tr><td>Prompt jump (PJA)</td><td>Yes</td><td>Comparison only; it breaks down at 1 dollar</td></tr>
+<tr><td><strong>Implicit Euler</strong></td><td><strong>Yes, any step size</strong></td><td><strong>Main solver</strong></td></tr>
+<tr><td>Crank–Nicolson</td><td>Yes</td><td>Optional second-order upgrade</td></tr>
+</table>
+<pre><code>// reactor.h — shared by the desktop test program and the Arduino sketch
+const float beta_i[6] = {0.000215,0.001424,0.001274,0.002568,0.000748,0.000273};
+const float lam_i[6]  = {0.0124,0.0305,0.111,0.301,1.14,3.01};
+const float BETA = 0.0065, LAMBDA = 1e-4;
+float n = 1.0, C[6];
+
+void initPrecursors() { for (int i=0;i&lt;6;i++) C[i] = beta_i[i]*n/(lam_i[i]*LAMBDA); }
+
+void pkeStep(float rho, float h, float S) {
+  float num = n + h*S, den = 1.0 - h*(rho - BETA)/LAMBDA;
+  for (int i=0;i&lt;6;i++) {
+    float d = 1.0 + h*lam_i[i];
+    num += h*lam_i[i]*C[i]/d;
+    den -= h*h*lam_i[i]*beta_i[i]/(LAMBDA*d);
+  }
+  n = num/den;
+  if (n &gt; 1e6) n = 1e6;   // float-overflow guard past prompt critical
+  for (int i=0;i&lt;6;i++) C[i] = (C[i] + h*beta_i[i]*n/LAMBDA)/(1.0 + h*lam_i[i]);
+}</code></pre>
+<p><strong>Period estimate:</strong> \(T=\Delta t/\ln(n_k/n_{k-1})\), smoothed with an EMA. The short-period trip fires at \(|T|&lt;10\) s.</p>
+</section>
+
+<!-- 7 -->
+<section id="mcu">
+<h2>7. Microcontroller: capabilities and what's expected of it</h2>
+
+<h3>7.1 Spec comparison</h3>
+<table>
+<tr><th>Spec</th><th>Uno R3 (ATmega328P)</th><th>Uno R4 Minima (Renesas RA4M1)</th></tr>
+<tr><td>Core / clock</td><td>8-bit AVR, 16 MHz <span class="tag v">V</span></td><td>32-bit Arm Cortex-M4, 48 MHz <span class="tag v">V</span></td></tr>
+<tr><td>Hardware FPU</td><td>None (software float)</td><td>Single-precision FPU (Cortex-M4F) <span class="tag u">U</span> for this exact part</td></tr>
+<tr><td>Flash (program)</td><td>32 KB <span class="tag v">V</span></td><td>256 KB <span class="tag v">V</span></td></tr>
+<tr><td>SRAM (variables)</td><td><strong>2 KB</strong> <span class="tag v">V</span></td><td>32 KB <span class="tag v">V</span></td></tr>
+<tr><td>EEPROM</td><td>1 KB <span class="tag v">V</span></td><td>8 KB data flash <span class="tag v">V</span></td></tr>
+<tr><td>ADC</td><td>10-bit; <code>analogRead</code> ≈ 104–110 µs <span class="tag v">V</span></td><td>10-bit default, up to 14-bit <span class="tag v">V</span></td></tr>
+<tr><td>DAC</td><td>None</td><td>12-bit <span class="tag v">V</span></td></tr>
+<tr><td><code>double</code></td><td>Same as <code>float</code> (4 bytes) <span class="tag v">V</span></td><td>64-bit, done in software (slow) <span class="tag u">U</span></td></tr>
+<tr><td>Pin current</td><td>40 mA absolute max <span class="tag v">V</span>; ~20 mA recommended <span class="tag u">U</span></td><td><strong>8 mA</strong> per pin <span class="tag v">V</span> (Arduino store)</td></tr>
+<tr><td>Float multiply / add</td><td>~8 µs <span class="tag e">E</span> (measure it)</td><td>1 cycle ≈ 21 ns <span class="tag v">V</span> (Arm docs)</td></tr>
+<tr><td>Float divide</td><td>~35 µs <span class="tag e">E</span> (measure it)</td><td>14 cycles ≈ 0.3 µs <span class="tag v">V</span></td></tr>
+<tr><td>Wokwi simulator</td><td>Yes <span class="tag v">V</span></td><td>No <span class="tag v">V</span></td></tr>
+</table>
+
+<h3>7.2 What the MCU is expected to do (its job list)</h3>
+<p>Every 10 ms, the Arduino must:</p>
+<ol>
+  <li>Read 2 pots (ADC), filter them, and rate-limit the rod.</li>
+  <li>Compute rod reactivity from the S-curve (one <code>sin()</code> call) plus temperature feedback.</li>
+  <li>Run one implicit Euler PKE step (7 ODEs) and one thermal step.</li>
+  <li>Estimate the period and SUR (one <code>log()</code> call).</li>
+  <li>Check trips: high power, high temperature, short period, and the SCRAM button flag. Latch if any fire.</li>
+  <li>Update the LEDs, buzzer and servo angle.</li>
+</ol>
+<p>Every 100 ms it prints one line to the Serial Plotter. Every 100–200 ms it refreshes the OLED, if one is fitted.</p>
+<p>It must also <strong>never miss a SCRAM press</strong> (handled by an interrupt), and <strong>never fall behind real time</strong> (each step must finish in under 10 ms).</p>
+
+<h3>7.3 Demand vs. capability</h3>
+<table>
+<tr><th>Requirement</th><th>Demand</th><th>R3</th><th>R4</th><th>Verdict</th></tr>
+<tr><td>PKE step</td><td>~60 flops (~18 divides) every 10 ms</td><td>~1–2 ms, <strong>10–20%</strong> of the step <span class="tag e">E</span></td><td>~20 µs, <strong>~0.2%</strong> <span class="tag e">E</span></td><td class="ok">Both OK</td></tr>
+<tr><td>Precision</td><td>Stiff 6-group system</td><td>32-bit float only</td><td>32-bit hardware float</td><td>OK with implicit Euler; check drift (V1)</td></tr>
+<tr><td>RAM</td><td>OLED buffer 1024 B + serial buffers 128 B + state</td><td>2048 B total, so <strong>tight</strong></td><td>32 KB</td><td>R3: use U8g2 page mode (128–256 B) or skip the OLED</td></tr>
+<tr><td>OLED refresh</td><td>Full 128×64 frame over I2C at 400 kHz</td><td>~25 ms, blocking <span class="tag e">E</span></td><td>Same I2C limit</td><td>Refresh at 5–10 Hz, not every step</td></tr>
+<tr><td>Pots</td><td>2 × <code>analogRead</code></td><td>~0.22 ms</td><td>Faster</td><td>OK</td></tr>
+<tr><td>Serial</td><td>~40 B every 100 ms</td><td>11.5 KB/s, 64 B TX buffer</td><td>Native USB</td><td>OK; keep each line under 64 B</td></tr>
+<tr><td>Servo</td><td>50 Hz update</td><td>Timer1; loses PWM on D9/D10</td><td>Supported</td><td>OK</td></tr>
+<tr><td>LEDs / buzzer</td><td>~5 outputs</td><td>Up to 40 mA abs max per pin</td><td>8 mA per pin</td><td>Use 1 kΩ resistors on the R4</td></tr>
+</table>
+<div class="callout ok"><strong>Bottom line:</strong> the R3 can run the physics, but its RAM is tight once you add a display. The R4 does the math about 50× faster and has 16× the RAM. Prototype on the R3 in Wokwi, then build on the R4.</div>
+<div class="callout warn"><strong>Measure, don't assume:</strong> time 1000 <code>pkeStep()</code> calls with <code>micros()</code> on each board, and report the real µs per step and the CPU % in your write-up. That is a strong, concrete result.</div>
+</section>
+
+<!-- 8 -->
+<section id="hardware">
+<h2>8. Hardware</h2>
+<h3>8.1 Bill of materials</h3>
+<table>
+<tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Approx. cost</th></tr>
+<tr><td>Arduino Uno R4 Minima (or R3)</td><td>1</td><td>Solver + I/O</td><td>~$20–27 <span class="tag u">U</span></td></tr>
+<tr><td>Breadboard + jumper wires</td><td>1 + ~40</td><td>Prototyping</td><td>~$8</td></tr>
+<tr><td>10 kΩ linear potentiometer</td><td>2</td><td>Rod position; coolant flow (optional)</td><td>~$2</td></tr>
+<tr><td>5 mm LEDs (green, yellow, red, blue)</td><td>4+</td><td>Status</td><td>~$1</td></tr>
+<tr><td>Resistors: 220/330 Ω (R3) or 1 kΩ (R4)</td><td>assorted</td><td>LED current limiting</td><td>~$1</td></tr>
+<tr><td>Tactile pushbutton</td><td>2</td><td>SCRAM, reset/acknowledge</td><td>~$1</td></tr>
+<tr><td>Piezo buzzer (active = simplest)</td><td>1</td><td>Alarm</td><td>~$2</td></tr>
+<tr><td>SG90/SG92R micro servo</td><td>1</td><td>Rod position indicator</td><td>~$6 <span class="tag v">V</span></td></tr>
+<tr><td>5 V ≥1 A supply + 470–1000 µF capacitor</td><td>1</td><td>Separate servo power</td><td>~$6</td></tr>
+<tr><td><em>Optional:</em> SSD1306 OLED or 16×2 I2C LCD</td><td>1</td><td>Readouts</td><td>~$6–10</td></tr>
+<tr><td><em>Optional:</em> 10-segment LED bar graph</td><td>1</td><td>Log-power display</td><td>~$3</td></tr>
+</table>
+<p><strong>Estimated total:</strong> about $45–70.</p>
+
+<h3>8.2 Pin map (same on R3 and R4)</h3>
+<table>
+<tr><th>Pin</th><th>Function</th><th>Reason</th></tr>
+<tr><td>D2</td><td>SCRAM button (<code>INPUT_PULLUP</code>, FALLING interrupt)</td><td>Only D2 and D3 support interrupts [H5]</td></tr>
+<tr><td>D3</td><td>Reset / acknowledge</td><td>Interrupt-capable</td></tr>
+<tr><td>D4</td><td>Active buzzer (or D8 + <code>tone()</code>)</td><td>Avoids the Timer2 conflict on D3/D11 [H8]</td></tr>
+<tr><td>D5, D6</td><td>Green, yellow LEDs (PWM)</td><td></td></tr>
+<tr><td>D7, D12</td><td>Red (SCRAM), blue (critical)</td><td></td></tr>
+<tr><td>D9</td><td>Servo</td><td>The Servo library disables PWM on D9/D10 [H7]</td></tr>
+<tr><td>A0 / A1</td><td>Rod pot / coolant pot</td><td>10-bit ADC [H9]</td></tr>
+<tr><td>A4 / A5</td><td>SDA / SCL (OLED)</td><td>[H4]</td></tr>
+</table>
+
+<h3>8.3 Electrical design (the E&amp;M part of ENGR 217)</h3>
+<ul>
+  <li><strong>LED resistor:</strong> \(R=(V_{cc}-V_f)/I\).
+    <ul>
+      <li>R3: \((5-2)/220\approx13.6\) mA.</li>
+      <li>R4: use 1 kΩ, which gives about 3 mA and stays under the 8 mA pin limit.</li>
+    </ul>
+  </li>
+  <li><strong>Pot:</strong> works as a voltage divider, \(V=5\cdot\text{ADC}/1023\).</li>
+  <li><strong>Servo:</strong> give it a separate 5 V supply with a shared ground [H7]; never power it from the board's 5 V pin [H4]. The bulk capacitor prevents brownout resets.</li>
+  <li><strong>Button:</strong> the ISR only sets a <code>volatile</code> flag. Debounce in <code>loop()</code>.</li>
+  <li><strong>Extra E&amp;M ideas</strong> if you want course credit:
+    <ul>
+      <li>Measure servo current with a multimeter.</li>
+      <li>Add an RC low-pass filter on the pot and compute its cutoff frequency \(f_c=1/(2\pi RC)\).</li>
+      <li>Scope the PWM waveform.</li>
+    </ul>
+  </li>
+</ul>
+</section>
+
+<!-- 9 -->
+<section id="software">
+<h2>9. Software architecture</h2>
+<h3>9.1 Folder layout: physics is shared, I/O is separate</h3>
+<pre><code>Nuclear Reactor Simulator/
+  reactor.h / reactor.cpp    physics only: step(rodFraction, dt) → power, temp, period
+  desktop/main.cpp           runs scripted scenarios on the PC, writes CSV
+  reference/pke_scipy.py     SciPy Radau reference solution
+  arduino/reactor_panel.ino  reads pots, drives LEDs/servo, calls the same reactor.h</code></pre>
+<div class="callout"><strong>Rules for <code>reactor.h</code></strong>, so the identical file runs on the Arduino:
+<ul>
+  <li>Use <code>float</code>, not <code>double</code>.</li>
+  <li>No STL (<code>std::vector</code>, <code>iostream</code>, <code>new</code>); use fixed arrays only.</li>
+  <li>No <code>millis()</code>. Pass <code>dt</code> in as an argument.</li>
+</ul></div>
+<p><strong>Compiler on Windows:</strong> MSYS2 + MinGW g++, Visual Studio Build Tools, WSL, or an online compiler (OnlineGDB) to start.</p>
+
+<h3>9.2 Arduino main loop</h3>
+<pre><code>loop():
+  every DT = 10 ms (millis(), never delay()):
+    read pots → EMA → rate-limit rod → rho_rod(x)
+    rho = rho_rod + alpha_T*(T - T_ref)        (forced to −5 dollars if tripped)
+    pkeStep(rho, DT, S)
+    thermal step (backward Euler)
+    period / SUR estimate
+    trips: P &gt; 1.2, T &gt; T_max, |period| &lt; 10 s, SCRAM flag → latch
+    outputs: LEDs, buzzer, servo = rod %, OLED (every 100–200 ms)
+  every 100 ms: Serial.print("P:..,rho:..,T:..,SUR:..")   → Serial Plotter</code></pre>
+<p><strong>State machine:</strong> SHUTDOWN → STARTUP → CRITICAL/POWER → TRIPPED (latched) → RESET (only allowed with rods fully in).</p>
+</section>
+
+<!-- 10 -->
+<section id="validation">
+<h2>10. Validation plan</h2>
+<table>
+<tr><th>#</th><th>Test</th><th>Pass criterion</th></tr>
+<tr><td>V1</td><td>Equilibrium: \(\rho=0\) for 10 min</td><td>\(|n-1|&lt;10^{-4}\)</td></tr>
+<tr><td>V2</td><td>Step +0.1% δk/k</td><td>Period ≈ 57 s (Lamarsh) and matches the inhour equation</td></tr>
+<tr><td>V3</td><td>Steps of +0.1 and +0.5 dollars</td><td>Prompt jump ≈ \(\beta/(\beta-\rho)\); period within a few % of SciPy</td></tr>
+<tr><td>V4</td><td>SCRAM from full power</td><td>Prompt drop, then the ~80 s negative period</td></tr>
+<tr><td>V5</td><td>Reference comparison</td><td>C++ / Arduino CSV vs <code>solve_ivp(method="Radau", rtol=1e-8)</code>, with the error plotted</td></tr>
+<tr><td>V6</td><td>Step-size sweep</td><td>Halving Δt halves the error (first order)</td></tr>
+<tr><td>V7</td><td>Explicit Euler at Δt &gt; 31 ms (e.g. 40 ms)</td><td>Visibly blows up; a report figure</td></tr>
+<tr><td>V8</td><td>Temperature feedback</td><td>+0.2 dollar settles at ΔT ≈ 26 K with net ρ → 0; first peak ~80% above final (n ≈ 3.4 at 60 s), within 2% by ~9 min, no sustained ringing [R13]</td></tr>
+<tr><td>V9</td><td>Timing</td><td>Measured µs per step and CPU % on the R3 and R4</td></tr>
+</table>
+</section>
+
+<!-- 11 -->
+<section id="phases">
+<h2>11. Build phases (code first, then hardware)</h2>
+<table>
+<tr><th>Phase</th><th>Work</th><th>Learn first</th><th>Done when</th><th>Effort</th></tr>
+<tr><td>0</td><td>Learn the basics</td><td>§4 #1, #2, #4</td><td>You can explain \(\rho\), \(\beta\), period and prompt critical</td><td>~4–6 h</td></tr>
+<tr><td>1</td><td>C++ on the PC: 1 group, explicit Euler, CSV out</td><td>§4 #5</td><td>V7 blow-up figure</td><td>~3 h</td></tr>
+<tr><td>2</td><td>Implicit Euler and 6 groups</td><td>§6</td><td>V1, V3, V4 pass</td><td>~4 h</td></tr>
+<tr><td>3</td><td>SciPy reference</td><td>§4 #6</td><td>V2, V5, V6 pass</td><td>~4 h</td></tr>
+<tr><td>4</td><td>Rod S-curve, rate limit, feedback, trips</td><td>§4 #7</td><td>V8 passes</td><td>~4 h</td></tr>
+<tr><td>5</td><td>Wokwi prototype on R3</td><td>§4 #8</td><td>Panel works in the browser</td><td>~4 h</td></tr>
+<tr><td>6</td><td>Buy parts; build on R4</td><td>§8</td><td>Physical panel works; V9 measured</td><td>~6 h</td></tr>
+<tr><td>7</td><td>Write-up and demo video</td><td>—</td><td>Plots, error analysis, video</td><td>~6 h</td></tr>
+</table>
+<p class="small">Total effort ≈ 35–40 h. A basic demo (phases 1, 2 and 5 with one group) is possible in a weekend. Timing: start after NREIP (Nov 30) and SMART (Dec 4), not during finals. Winter break is ideal, and the project is done before ORNL RSI (Feb 25).</p>
+</section>
+
+<!-- 12 -->
+<section id="risks">
+<h2>12. Risks</h2>
+<table>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Explicit integrator blows up</td><td>Implicit Euler (§6)</td></tr>
+<tr><td>Float overflow past prompt critical</td><td>Clamp \(n\); auto-trip on short period</td></tr>
+<tr><td>R3 runs out of RAM</td><td>U8g2 page mode or no OLED; use the R4</td></tr>
+<tr><td>Servo brownout resets the board</td><td>Separate supply, shared ground, bulk capacitor</td></tr>
+<tr><td>Pot noise shows up as reactivity noise</td><td>EMA filter + rate limit</td></tr>
+<tr><td>R4 8 mA pin limit</td><td>1 kΩ resistors or a transistor driver</td></tr>
+<tr><td>Scope creep (Xe/Sm poisons, more loops)</td><td>Stretch goals only</td></tr>
+</table>
+</section>
+
+<!-- 13 -->
+<section id="prior">
+<h2>13. Prior art and inspiration</h2>
+<table>
+<tr><th>Project</th><th>What it is</th><th>Borrow / how this differs</th></tr>
+<tr><td><strong>DUNE</strong> (H. Kabiraj) [P1]</td><td>Python 6-group PKE with feedback, Xe/Sm poisons and CSV logging. The Arduino only drives a servo and LEDs.</td><td>Closest match. <strong>Here the physics runs on the Arduino.</strong></td></tr>
+<tr><td><strong>pyReactor</strong> (W. Gurecky) [P2][P3]</td><td>Python simulator + LEGO/Arduino reactor</td><td>Rate-limited rods, latched SCRAM</td></tr>
+<tr><td>Cornell ECE 4760 Fission Simulator [P4][P5]</td><td>RP2040 RBMK particle model</td><td>Splits the work across two cores</td></tr>
+<tr><td>NuclearPi [P6]</td><td>Raspberry Pi panel by an ex-Westinghouse operator</td><td>Annunciator layout</td></tr>
+<tr><td>RBMK control panel replica [P7]</td><td>ESP32 panel</td><td>Event log for authenticity</td></tr>
+<tr><td>openpointkinetics [P9]</td><td>Python teaching solver</td><td>A second reference for V5</td></tr>
+<tr><td>Other PKE solvers [P10]</td><td>Fortran / C++ / MATLAB</td><td>EPKE is a stiffness-aware method</td></tr>
+<tr><td>Purdue PUR-1 [P11]</td><td>The only NRC-licensed reactor with fully digital I&amp;C</td><td>Real-world motivation</td></tr>
+</table>
+<p><strong>What makes this project stand out:</strong></p>
+<ul>
+  <li>The solver runs on the board.</li>
+  <li>Six delayed groups with an implicit integrator, plus measured timing.</li>
+  <li>Log-power and SUR display.</li>
+  <li>A short-period trip.</li>
+  <li>Prompt-drop and inhour checks.</li>
+  <li>Error quantified against SciPy.</li>
+</ul>
+</section>
+
+<!-- 14 -->
+<section id="cites">
+<h2>14. Citations</h2>
+<h3>Physics</h3>
+<ul class="cites">
+  <li>[R1] Wikipedia, “Nuclear reactor physics” — https://en.wikipedia.org/wiki/Nuclear_reactor_physics</li>
+  <li>[R2] Wikipedia, “Delayed neutron” — https://en.wikipedia.org/wiki/Delayed_neutron</li>
+  <li>[R3] G. R. Keepin, T. F. Wimett, R. K. Zeigler, <em>Phys. Rev.</em> 107, 1044 (1957); Keepin, <em>Physics of Nuclear Kinetics</em> (1965)</li>
+  <li>[R4] Lamarsh &amp; Baratta, <em>Introduction to Nuclear Engineering</em>, 3rd ed.; Duderstadt &amp; Hamilton, <em>Nuclear Reactor Analysis</em> (1976) ch. 6; Lewis, <em>Fundamentals of Nuclear Reactor Physics</em> ch. 5 &amp; 9</li>
+  <li>[R5] U.S. DOE, <em>DOE Fundamentals Handbook: Nuclear Physics and Reactor Theory</em>, Vol. 2 of 2, DOE-HDBK-1019/2-93. NP-03: reactivity, coefficients, control rods (pp. 17–58). NP-04: subcritical multiplication, kinetics, operation (pp. 1–34). Checked from a PDF copy, 2026-11-20. Archive link: https://web.archive.org/web/20170914172136/https://energy.gov/sites/prod/files/2013/06/f2/h1019v2.pdf</li>
+  <li>[R6] Wikipedia, “Prompt criticality” — https://en.wikipedia.org/wiki/Prompt_criticality</li>
+  <li>[R7] Wikipedia, “Stiff equation” — https://en.wikipedia.org/wiki/Stiff_equation</li>
+  <li>[R8] SciPy <code>solve_ivp</code> — https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html</li>
+  <li>[R9] MIT OCW 22.05 — https://ocw.mit.edu/courses/22-05-neutron-science-and-reactor-physics-fall-2009/</li>
+  <li>[R10] MIT OCW 22.01 — https://ocw.mit.edu/courses/22-01-introduction-to-nuclear-engineering-and-ionizing-radiation-fall-2016/</li>
+  <li>[R11] IAEA Nuclear Data for Safeguards, Table A-6 — https://www-nds.iaea.org/sgnucdat/a6.htm</li>
+  <li>[R12] U.S. DOE, <em>DOE Fundamentals Handbook: Nuclear Physics and Reactor Theory</em>, Vol. 1 of 2, DOE-HDBK-1019/1-93, Module NP-02, “Prompt and Delayed Neutrons,” Table 3, pp. 29–30 — https://www.energy.gov/sites/default/files/2026-04/DOE-HDBK-1019-93_VOL1.pdf</li>
+  <li>[R13] J. H. Bickel, <em>Fundamentals of Nuclear Engineering</em>, Module 10, “Power Reactor Feedback Effects,” Rev. 01 (lecture slides; NRC ADAMS ML12142A130). Plant data quoted from the Diablo Canyon (PWR) and Dresden (BWR) FSARs. Checked from a PDF copy, 2026-11-20 — https://www.nrc.gov/docs/ML1214/ML12142A130.pdf</li>
+  <li>[R14] nuclear-power.com, “Moderator Temperature Coefficient – MTC” (secondary educational site) — https://www.nuclear-power.com/nuclear-power/reactor-physics/nuclear-fission-chain-reaction/reactivity-coefficients-reactivity-feedbacks/moderator-temperature-coefficient-mtc/</li>
+  <li>[R15] U.S. NRC, NUREG-0800 <em>Standard Review Plan</em>, Ch. 4, Section 4.3 “Nuclear Design,” Rev. 3 (03/2007). Index page checked 2026-11-20 — https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr0800/ch4/</li>
+</ul>
+<h3>Hardware / microcontroller</h3>
+<ul class="cites">
+  <li>[H1] https://docs.arduino.cc/hardware/uno-rev3/</li>
+  <li>[H2] https://docs.arduino.cc/hardware/uno-r4-minima/</li>
+  <li>[H3] https://store.arduino.cc/products/uno-r4-minima</li>
+  <li>[H4] https://docs.arduino.cc/tutorials/uno-r4-minima/cheat-sheet/</li>
+  <li>[H5] https://docs.arduino.cc/language-reference/en/functions/external-interrupts/attachInterrupt/</li>
+  <li>[H6] https://www.adafruit.com/product/169</li>
+  <li>[H7] https://docs.arduino.cc/libraries/servo/</li>
+  <li>[H8] https://docs.arduino.cc/language-reference/en/functions/advanced-io/tone/</li>
+  <li>[H9] https://docs.arduino.cc/learn/microcontrollers/analog-input/</li>
+  <li>[H10] https://docs.arduino.cc/software/ide-v2/tutorials/ide-v2-serial-plotter/</li>
+  <li>[H11] https://docs.wokwi.com/getting-started/supported-hardware</li>
+  <li>[H12] https://wokwi.com/arduino</li>
+  <li>[H13] Microchip ATmega328P — https://www.microchip.com/en-us/product/atmega328p</li>
+  <li>[H14] Arduino <code>double</code> reference — https://docs.arduino.cc/language-reference/en/variables/data-types/double/</li>
+  <li>[H15] Nick Gammon, ADC timing — https://www.gammon.com.au/adc</li>
+  <li>[H16] Arduino digital pins — https://docs.arduino.cc/learn/microcontrollers/digital-pins/</li>
+  <li>[H17] Arm Cortex-M4 FPU instruction timing — https://support.arm.com/documentation/ddi0439/b/Floating-Point-Unit/FPU-Functional-Description/FPU-instruction-set</li>
+  <li>[H18] Adafruit_SSD1306 source — https://raw.githubusercontent.com/adafruit/Adafruit_SSD1306/master/Adafruit_SSD1306.cpp</li>
+  <li>[H19] U8g2 reference (page buffer) — https://github.com/olikraus/u8g2/wiki/u8g2reference</li>
+  <li>[H20] AVR HardwareSerial buffer sizes — https://raw.githubusercontent.com/arduino/ArduinoCore-avr/master/cores/arduino/HardwareSerial.h</li>
+  <li>[H21] Servo library timers — https://raw.githubusercontent.com/arduino-libraries/Servo/master/src/avr/ServoTimers.h</li>
+  <li>[H22] Arduino Built-in Examples — https://docs.arduino.cc/built-in-examples/</li>
+</ul>
+<h3>Prior art</h3>
+<ul class="cites">
+  <li>[P1] https://github.com/approx-infinity/DUNE</li>
+  <li>[P2] https://github.com/wgurecky/pyReactor</li>
+  <li>[P3] https://hackaday.com/2016/02/22/lego-nuclear-reactor-uses-arduino/</li>
+  <li>[P4] https://ece4760.github.io/Projects/Spring2025/ks875_ttw24_3rdGroupMember/index.html</li>
+  <li>[P5] https://hackaday.com/2025/06/19/fission-simulator-melts-down-rp2040/</li>
+  <li>[P6] https://hackaday.com/2019/06/27/nuclear-reactor-simulator-is-the-project-of-a-lifetime/</li>
+  <li>[P7] https://hackaday.com/2026/02/11/making-a-functional-control-panel-of-the-chernobyl-rbmk-reactor/</li>
+  <li>[P8] https://github.com/search?q=arduino+reactor+simulator&amp;type=repositories</li>
+  <li>[P9] https://github.com/richmorrison/openpointkinetics</li>
+  <li>[P10] https://github.com/search?q=point+kinetics&amp;type=repositories</li>
+  <li>[P11] https://engineering.purdue.edu/NE/research/facilities/reactor</li>
+</ul>
+</section>
+
+<!-- 15 -->
+<section id="unverified">
+<h2>15. Not yet verified — check before citing in a report</h2>
+<h3>Physics values</h3>
+<ul>
+  <li>Bickel's plant coefficients [R13] come from two specific FSARs (Diablo Canyon, Dresden). Quote them as examples, not as typical values for every reactor.</li>
+  <li>The “MTC non-positive at significant power” wording is quoted by [R14]. Before quoting it, read it in the SRP 4.3 PDF itself [R15]. The 0 to −80 pcm/°C range is from [R14] only, which cites no source for it.</li>
+  <li>The exact sine form of the rod-worth curve (the S shape is verified).</li>
+</ul>
+<h3>Learning resources</h3>
+<ul>
+  <li>The Duderstadt &amp; Hamilton free PDF.</li>
+  <li>The NRC Reactor Concepts Manual.</li>
+  <li>The MIT 22.01 YouTube playlist.</li>
+  <li>Interactive web reactor simulators (IAEA, NEI).</li>
+</ul>
+<h3>Microcontroller specs</h3>
+<ul>
+  <li>The FPU on this specific RA4M1 part (Renesas page blocked).</li>
+  <li><code>double</code> being 64-bit on the R4.</li>
+  <li>The ATmega328P 20 mA recommended / 200 mA total limits.</li>
+  <li>AVR float timing (measure it yourself).</li>
+  <li>SG90 stall current.</li>
+  <li>US part prices.</li>
+</ul>
+<h3>Not found</h3>
+<ul>
+  <li>Any published paper on running PKE on a microcontroller or FPGA. Search IEEE Xplore and ANS Transactions through the TAMU library.</li>
+</ul>
+</section>
+
+</main>
+</div>
+</body>
+</html>

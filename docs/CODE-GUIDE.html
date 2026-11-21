@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reactor Simulator — Code Guide (what to build, install, and compute)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
+<style>
+  :root { --ink:#1b1f24; --muted:#5b6470; --line:#d9dee5; --bg:#f7f8fa; --card:#fff;
+          --accent:#500000; --ok:#1f7a3a; --warn:#a15c00; --bad:#b3261e; --info:#1d4ed8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--accent); color:#fff; padding:28px 32px; }
+  header h1 { margin:0 0 4px; font-size:1.7rem; }
+  header p { margin:0; opacity:.85; }
+  .layout { display:grid; grid-template-columns:250px 1fr; gap:24px; max-width:1320px; margin:0 auto; padding:24px; }
+  nav { position:sticky; top:16px; align-self:start; font-size:.9rem; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px; max-height:calc(100vh - 32px); overflow:auto; }
+  nav a { display:block; color:var(--ink); text-decoration:none; padding:3px 0; }
+  nav a.sub { padding-left:14px; font-size:.85rem; color:var(--muted); }
+  nav a:hover { color:var(--accent); }
+  main section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px 28px; margin-bottom:20px; }
+  h2 { margin-top:0; color:var(--accent); border-bottom:2px solid var(--line); padding-bottom:6px; }
+  h3 { margin:22px 0 6px; }
+  table { border-collapse:collapse; width:100%; margin:10px 0 16px; font-size:.92rem; }
+  th, td { border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top; }
+  th { background:#eef1f5; }
+  code { background:#eef1f5; padding:1px 5px; border-radius:4px; font-size:.88em; }
+  pre { background:#1e2329; color:#e6e6e6; padding:14px 16px; border-radius:6px; overflow:auto; font-size:.84rem; line-height:1.45; }
+  pre code { background:none; padding:0; }
+  .callout { border-left:4px solid var(--info); background:#eef4ff; padding:10px 14px; border-radius:4px; margin:12px 0; }
+  .callout.warn { border-color:var(--warn); background:#fff6e8; }
+  .callout.bad { border-color:var(--bad); background:#fdeeee; }
+  .callout.ok { border-color:var(--ok); background:#ecf7ef; }
+  .tag { display:inline-block; font-size:.72rem; font-weight:600; padding:1px 7px; border-radius:10px; white-space:nowrap; }
+  .v { background:#ecf7ef; color:var(--ok); } .d { background:#eef4ff; color:var(--info); } .u { background:#fff6e8; color:var(--warn); }
+  .arch { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:12px 0; }
+  .box { border:2px solid var(--line); border-radius:8px; padding:10px 12px; font-size:.9rem; }
+  .box h4 { margin:0 0 4px; }
+  .box.core { border-color:var(--accent); grid-column:1 / span 3; text-align:center; }
+  ol.check li { margin-bottom:6px; }
+  ul.cites li { word-break:break-all; font-size:.88rem; }
+  .small { font-size:.88rem; color:var(--muted); }
+  @media (max-width:900px) { .layout { grid-template-columns:1fr; } nav { position:static; max-height:none; } .arch { grid-template-columns:1fr; } .box.core { grid-column:auto; } }
+  @media print { nav { display:none; } .layout { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reactor Simulator — Code Guide</h1>
+  <p>What goes in the code · what to install · which formulas · how to start · companion to PLAN.html · 2026-11-20</p>
+</header>
+
+<div class="layout">
+<nav>
+  <strong>Contents</strong>
+  <a href="#overview">1. Architecture overview</a>
+  <a href="#start">2. Starting the project (steps)</a>
+  <a href="#install">3. What to install</a>
+  <a href="#layout">4. Repo layout &amp; file sizes</a>
+  <a href="#formulas">5. Formula sheet</a>
+  <a class="sub" href="#choices">5.1 Decisions &amp; why</a>
+  <a class="sub" href="#gotchas">5.2 Math gotchas</a>
+  <a href="#core">6. Physics library contents</a>
+  <a class="sub" href="#m-params">params</a>
+  <a class="sub" href="#m-kinetics">kinetics</a>
+  <a class="sub" href="#m-plant">plant (rods, heat)</a>
+  <a class="sub" href="#m-instr">instruments</a>
+  <a class="sub" href="#m-prot">protection</a>
+  <a class="sub" href="#m-reactor">reactor (facade)</a>
+  <a href="#firmware">7. Firmware contents</a>
+  <a href="#desktop">8. Desktop CLI &amp; tests</a>
+  <a href="#python">9. Python tools</a>
+  <a href="#config">10. Config files</a>
+  <a href="#rules">11. Coding rules</a>
+  <a href="#milestones">12. Milestones</a>
+  <a href="#cites">13. Citations</a>
+  <a href="#unverified">14. Not yet verified</a>
+  <hr>
+  <span class="small"><span class="tag v">VERIFIED</span> fetched source<br><span class="tag d">DERIVED</span> follows from verified math<br><span class="tag u">UNVERIFIED</span> check before citing</span>
+</nav>
+
+<main>
+
+<!-- 1 -->
+<section id="overview">
+<h2>1. Architecture overview</h2>
+<p>There is <strong>one physics library</strong> and <strong>three programs</strong> that use it. The physics code never calls Arduino functions, so the code you test on your PC is byte-for-byte what runs on the board.</p>
+<div class="arch">
+  <div class="box core"><h4>lib/reactor — physics library (C++11, float only)</h4>params · kinetics · plant (rods + heat) · instruments · protection · reactor facade</div>
+  <div class="box"><h4>desktop/sim_cli</h4>Runs scripted scenarios on the PC and writes CSV. Built with CMake + g++.</div>
+  <div class="box"><h4>tests/</h4>doctest unit tests that check the physics against theory. Run with <code>ctest</code>.</div>
+  <div class="box"><h4>src/ (firmware)</h4>Uno R4: pots, buttons, LEDs, buzzer, servo, OLED and serial. Built with PlatformIO.</div>
+</div>
+<p><strong>Python tools</strong> (<code>tools/</code>) solve the same equations with SciPy as an independent “answer key,” then compare it against the C++ and board CSV output and make the figures.</p>
+<p><strong>Data flow, every 10 ms:</strong></p>
+<ol>
+  <li>Inputs: rod demand, SCRAM, reset, optional reactivity override.</li>
+  <li>Rod position and rod reactivity.</li>
+  <li>Total reactivity: rod plus temperature feedback.</li>
+  <li>Kinetics step to get power.</li>
+  <li>Thermal step to get temperature.</li>
+  <li>Period and SUR.</li>
+  <li>Trip logic.</li>
+  <li>Readings go out to the LEDs, servo, OLED and CSV.</li>
+</ol>
+</section>
+
+<!-- 2 -->
+<section id="start">
+<h2>2. Starting the project — important steps, in order</h2>
+<ol class="check">
+  <li><strong>Decide which computer.</strong> This is a work laptop, so check the policy or use a personal machine (see the earlier discussion). Everything below works on either.</li>
+  <li><strong>Install and verify the tools</strong> (§3). Don't write code until <code>g++ --version</code>, <code>cmake --version</code>, <code>git --version</code> and <code>py --version</code> all work in a fresh terminal.</li>
+  <li><strong>Clone the empty GitHub repo</strong> and set your personal identity <em>for this repo only</em>:
+    <pre><code>git clone https://github.com/lanlanf/Nuclear-simulator.git
+cd Nuclear-simulator
+git config user.name  "Landon Fancher"
+git config user.email "36139453+lanlanf@users.noreply.github.com"</code></pre></li>
+  <li><strong>Add the housekeeping files first:</strong> <code>.gitignore</code>, <code>LICENSE</code> (MIT), <code>README.md</code> (outline in §10), and copy <code>PLAN.md</code>/<code>PLAN.html</code>/this file into <code>docs/</code>. Commit with the message <code>chore: project skeleton</code>.</li>
+  <li><strong>Get an empty build passing.</strong> Create a <code>CMakeLists.txt</code> plus one dummy doctest test, and confirm <code>ctest</code> shows 1/1 passed. This proves the toolchain before any physics.</li>
+  <li><strong>Write down the units in <code>params.h</code></strong> before writing any math: time in s, power normalized so 1 = 100%, reactivity as absolute Δk/k (dollars only for display), temperature in K.</li>
+  <li><strong>Fix the CSV format</strong> (<code>t,rho,n,T,period,sur,rod,trip</code>). The C++, the firmware and Python all use it.</li>
+  <li><strong>Write the first test before the solver:</strong> “critical reactor stays at power” (T1 in §8). Then write <code>stepImplicit()</code> until it passes.</li>
+  <li><strong>Order the parts early</strong> (BOM in PLAN.html §8) so shipping isn't on your critical path. The firmware phase needs them.</li>
+  <li><strong>Commit small and often</strong> with Conventional Commits: <code>feat:</code>, <code>fix:</code>, <code>test:</code>, <code>docs:</code>, <code>build:</code>, <code>chore:</code> [P17].</li>
+  <li><strong>Keep a dated engineering log</strong> (<code>docs/LOG.md</code>) recording what you tried, what failed and the plots. It feeds your report, README and scholarship essays.</li>
+  <li><strong>Blink the R4 with PlatformIO</strong> the day it arrives, before any reactor code goes on it. That isolates upload and driver problems.</li>
+</ol>
+</section>
+
+<!-- 3 -->
+<section id="install">
+<h2>3. What to install</h2>
+<table>
+<tr><th>#</th><th>Tool</th><th>How</th><th>Verify</th><th>Status</th></tr>
+<tr><td>1</td><td><strong>MSYS2</strong> (provides g++ on Windows)</td><td>Installer from <a href="https://www.msys2.org/">msys2.org</a>. Needs Win 10 1809 or newer.</td><td>The UCRT64 terminal opens</td><td><span class="tag v">VERIFIED</span> [I1]</td></tr>
+<tr><td>2</td><td><strong>g++ toolchain</strong></td><td>In the UCRT64 terminal: <code>pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain</code></td><td><code>g++ --version</code>, <code>gdb --version</code></td><td><span class="tag v">VERIFIED</span> [I2]</td></tr>
+<tr><td>3</td><td><strong>CMake + Ninja</strong></td><td><code>pacman -S mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja</code>, or the installer from <a href="https://cmake.org/download/">cmake.org</a></td><td><code>cmake --version</code></td><td>Installer <span class="tag v">VERIFIED</span> [I3]; pacman names <span class="tag u">UNVERIFIED</span></td></tr>
+<tr><td>4</td><td><strong>PATH</strong></td><td>Add <code>C:\msys64\ucrt64\bin</code> to your <em>user</em> Path, then reopen VS Code and terminals</td><td><code>where g++</code></td><td><span class="tag v">VERIFIED</span> [I2]</td></tr>
+<tr><td>5</td><td><strong>Git for Windows</strong></td><td><a href="https://git-scm.com/install/windows">git-scm.com</a> or <code>winget install --id Git.Git -e --source winget</code></td><td><code>git --version</code></td><td><span class="tag v">VERIFIED</span> [I4]</td></tr>
+<tr><td>6</td><td><strong>Python 3</strong></td><td><a href="https://www.python.org/downloads/windows/">python.org</a>. Pick a version SciPy has Windows wheels for; if <code>pip</code> tries to <em>compile</em> SciPy, use the previous Python release.</td><td><code>py --version</code></td><td><span class="tag v">VERIFIED</span> [I5]</td></tr>
+<tr><td>7</td><td><strong>Virtual env + packages</strong></td><td><code>py -m venv .venv</code> → <code>.venv\Scripts\Activate.ps1</code> → <code>pip install numpy scipy matplotlib pyserial</code><br>If PowerShell blocks activation: <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></td><td><code>python -c "import numpy, scipy, matplotlib, serial"</code></td><td>venv <span class="tag v">VERIFIED</span> [I6]</td></tr>
+<tr><td>8</td><td><strong>PlatformIO IDE</strong> (VS Code extension)</td><td>Extensions view → “PlatformIO IDE”. Needs <code>git</code> on PATH.</td><td>The PIO toolbar appears; build a Blink project</td><td><span class="tag v">VERIFIED</span> [I7]</td></tr>
+<tr><td>9</td><td><strong>Uno R4 Minima support</strong></td><td>Automatic: <code>platform = renesas-ra</code>, <code>board = uno_r4_minima</code> in <code>platformio.ini</code>. Default upload is DFU over USB-C.</td><td><code>pio run -e uno_r4_minima</code></td><td><span class="tag v">VERIFIED</span> [I8]</td></tr>
+<tr><td>10</td><td><strong>doctest</strong></td><td>Download the single header <a href="https://raw.githubusercontent.com/doctest/doctest/master/doctest/doctest.h">doctest.h</a> into <code>third_party/</code>. Works with C++11.</td><td>The test program runs</td><td><span class="tag v">VERIFIED</span> [I9]</td></tr>
+<tr><td>11</td><td><em>Optional:</em> Arduino IDE 2</td><td><a href="https://www.arduino.cc/en/software">arduino.cc/en/software</a>. A fallback uploader, and it has the Serial Plotter.</td><td>Board shows in the selector</td><td><span class="tag v">VERIFIED</span> [I10]</td></tr>
+</table>
+
+<h3>VS Code extensions</h3>
+<table>
+<tr><th>Extension</th><th>ID</th><th>Why</th></tr>
+<tr><td>C/C++</td><td><code>ms-vscode.cpptools</code></td><td>IntelliSense and debugging</td></tr>
+<tr><td>CMake Tools</td><td><code>ms-vscode.cmake-tools</code></td><td>Build and run the tests from VS Code</td></tr>
+<tr><td>PlatformIO IDE</td><td><code>platformio.platformio-ide</code></td><td>Build and upload the firmware</td></tr>
+<tr><td>Python</td><td><code>ms-python.python</code></td><td>The reference solver and plots</td></tr>
+<tr><td>Teleplot</td><td><code>alexnesnes.teleplot</code></td><td>Live plots from serial lines formatted <code>&gt;name:value</code>. PlatformIO's monitor doesn't plot.</td></tr>
+<tr><td><em>Optional:</em> Wokwi Simulator</td><td><code>Wokwi.wokwi-vscode</code></td><td>Paid after a trial, and has no R4 support. The free web version works for R3 tests.</td></tr>
+</table>
+<p class="small">All extension IDs verified on the VS Code Marketplace [I2][I11][I7][I12][P10][I13].</p>
+</section>
+
+<!-- 4 -->
+<section id="layout">
+<h2>4. Repo layout &amp; expected file sizes</h2>
+<table>
+<tr><th>Path</th><th>Contents</th><th>≈ Lines</th></tr>
+<tr><td><code>lib/reactor/src/params.h</code></td><td>Constants, Keepin data, setpoints, units comment</td><td>60</td></tr>
+<tr><td><code>lib/reactor/src/kinetics.h/.cpp</code></td><td>PKE state, equilibrium init, implicit and explicit steps</td><td>100</td></tr>
+<tr><td><code>lib/reactor/src/plant.h/.cpp</code></td><td>Rod S-curve, rod motion, thermal step, feedback</td><td>70</td></tr>
+<tr><td><code>lib/reactor/src/instruments.h/.cpp</code></td><td>Period meter, SUR, log power</td><td>60</td></tr>
+<tr><td><code>lib/reactor/src/protection.h/.cpp</code></td><td>Trip bit flags, latch, reset rules</td><td>60</td></tr>
+<tr><td><code>lib/reactor/src/reactor.h/.cpp</code></td><td>Facade: <code>step(inputs, dt) → Readings</code></td><td>100</td></tr>
+<tr><td><code>src/main.cpp</code></td><td>setup/loop, fixed-step accumulator, serial commands</td><td>150</td></tr>
+<tr><td><code>src/panel_io.h/.cpp</code></td><td>Pots, buttons and ISR, LEDs, buzzer, servo</td><td>120</td></tr>
+<tr><td><code>src/display.h/.cpp</code></td><td>OLED screen</td><td>80</td></tr>
+<tr><td><code>desktop/sim_cli.cpp</code></td><td>Scenario runner that writes CSV</td><td>120</td></tr>
+<tr><td><code>tests/*.cpp</code></td><td>doctest cases (§8)</td><td>300</td></tr>
+<tr><td><code>tools/reference.py</code></td><td>SciPy Radau solver and inhour root</td><td>120</td></tr>
+<tr><td><code>tools/compare.py</code></td><td>Overlay, error, convergence and stability plots</td><td>150</td></tr>
+<tr><td><code>tools/capture_serial.py</code></td><td>Logs board CSV via pyserial</td><td>50</td></tr>
+<tr><td><code>CMakeLists.txt</code>, <code>platformio.ini</code>, <code>.gitignore</code>, <code>tools/requirements.txt</code></td><td>Build configuration</td><td>70</td></tr>
+<tr><td><code>third_party/doctest.h</code></td><td>Downloaded, not written by you</td><td>—</td></tr>
+<tr><td><code>docs/</code>, <code>figures/</code>, <code>results/</code> (ignored by Git)</td><td>Plans, log, plots, CSV</td><td>—</td></tr>
+<tr><th>Total written by you</th><th></th><th>≈ 1,600</th></tr>
+</table>
+<div class="callout"><strong>Why <code>tests/</code> and not <code>test/</code>?</strong> PlatformIO owns <code>test/</code> by default [I14], so using <code>tests/</code> keeps the desktop tests out of the firmware build.</div>
+</section>
+
+<!-- 5 -->
+<section id="formulas">
+<h2>5. Formula sheet — what the code will compute</h2>
+<table>
+<tr><th>#</th><th>Name</th><th>Formula</th><th>Used in</th><th>Status</th></tr>
+<tr><td>F1</td><td>Point kinetics (6 groups + source)</td><td>\(\dot n=\frac{\rho-\beta}{\Lambda}n+\sum_i\lambda_iC_i+S\)<br>\(\dot C_i=\frac{\beta_i}{\Lambda}n-\lambda_iC_i\)</td><td><code>kinetics</code></td><td><span class="tag v">VERIFIED</span> [F1]</td></tr>
+<tr><td>F2</td><td>Equilibrium start</td><td>\(C_{i0}=\dfrac{\beta_i n_0}{\lambda_i\Lambda}\)</td><td><code>initEquilibrium</code></td><td><span class="tag d">DERIVED</span> (set \(\dot C_i=0\))</td></tr>
+<tr><td>F3</td><td>Keepin U-235 thermal data</td><td>\(\lambda\) = 0.0124, 0.0305, 0.111, 0.301, 1.14, 3.01 s⁻¹<br>\(a_i=\beta_i/\beta\) = 0.033, 0.219, 0.196, 0.395, 0.115, 0.042</td><td><code>params</code></td><td><span class="tag v">VERIFIED</span> [F10] Table 3 (DOE rounds to 2–3 figures; group 3 is 6.2 s there vs Keepin's 6.22 s)</td></tr>
+<tr><td>F4</td><td>Delayed fraction</td><td>\(\beta=0.0065\) (Keepin); 0.00665 in newer evaluations</td><td><code>params</code></td><td><span class="tag v">VERIFIED</span> [F3][F4][F10]</td></tr>
+<tr><td>F5</td><td>Generation time</td><td>\(\Lambda=\ell/k\approx10^{-4}\) s (thermal)</td><td><code>params</code></td><td><span class="tag v">VERIFIED</span> [F1][F2][F10] (DOE: \(10^{-4}\)–\(10^{-5}\) s)</td></tr>
+<tr><td>F6</td><td>Reactivity, dollars, prompt critical</td><td>\(\rho=(k-1)/k\); \(\rho_\$=\rho/\beta\); prompt critical at \(\rho\ge\beta\)</td><td>display, trips</td><td><span class="tag v">VERIFIED</span> [F1][F2][F11] (DOE Eq. 3-5, 3-6; “\$1 = \(\beta_\text{eff}\)”)</td></tr>
+<tr><td>F7</td><td>Backward Euler step (closed form)</td><td>\(n^{+}=\dfrac{n+h\sum_i\frac{\lambda_iC_i}{1+h\lambda_i}+hS}{1-\frac{h(\rho-\beta)}{\Lambda}-\frac{h^2}{\Lambda}\sum_i\frac{\lambda_i\beta_i}{1+h\lambda_i}}\), then \(C_i^{+}=\dfrac{C_i+h\beta_in^{+}/\Lambda}{1+h\lambda_i}\)</td><td><code>stepImplicit</code></td><td><span class="tag d">DERIVED</span> (algebra in PLAN §3)</td></tr>
+<tr><td>F8</td><td>Explicit Euler (to demo instability)</td><td>\(y^{+}=y+h\,f(y)\); stable only for \(h&lt;2\Lambda/(\beta-\rho)\)</td><td><code>stepExplicit</code>, test V7</td><td><span class="tag v">VERIFIED</span> [F5]</td></tr>
+<tr><td>F9</td><td>Inhour equation (exact period)</td><td>\(\rho=\dfrac{\Lambda}{T}+\sum_i\dfrac{\beta_i}{1+\lambda_iT}\)</td><td>tests, <code>reference.py</code></td><td><span class="tag v">VERIFIED</span> [F1][F2]</td></tr>
+<tr><td>F10</td><td>Stable period, one group (rough)</td><td>\(T\approx\dfrac{\beta-\rho}{\lambda_\text{eff}\,\rho}\) (DOE Eq. 4-9). DOE: \(\lambda_\text{eff}\approx0.08\ \text{s}^{-1}\) steady, 0.1 while power rises, 0.05 while it falls</td><td>sanity checks only</td><td><span class="tag v">VERIFIED</span> [F11]; \(\beta/\sum(\beta_i/\lambda_i)=0.077\) <span class="tag d">DERIVED</span></td></tr>
+<tr><td>F11</td><td>Prompt jump / drop</td><td>\(\dfrac{n_1}{n_0}=\dfrac{\beta-\rho_0}{\beta-\rho_1}\); from critical: \(\dfrac{\beta}{\beta-\rho}\)</td><td>tests</td><td><span class="tag v">VERIFIED</span> [F3]</td></tr>
+<tr><td>F12</td><td>Post-SCRAM period</td><td>\(\tau\to-1/\lambda_1\approx-80\) s</td><td>tests, display</td><td><span class="tag v">VERIFIED</span> [F2][F11] (DOE: ≈ −80 s, SUR ≈ −1/3 DPM)</td></tr>
+<tr><td>F13</td><td>Subcritical multiplication (source level)</td><td>\(n_\text{ss}=-\dfrac{S\Lambda}{\rho}\) for \(\rho&lt;0\)</td><td>choosing \(S\), tests</td><td><span class="tag d">DERIVED</span>; agrees with DOE \(N=S/(1-k)\) (Eq. 4-3) [F11], since \(1-k\approx-\rho\)</td></tr>
+<tr><td>F14</td><td>Rod worth S-curve</td><td>\(\rho_\text{rod}(x)=\rho_w\left[x-\dfrac{\sin 2\pi x}{2\pi}\right]-\rho_\text{crit}\), \(x\in[0,1]\) withdrawn</td><td><code>plant</code></td><td>S shape <span class="tag v">VERIFIED</span> [F11] Figs. 9–12; the sine form is a smooth fit, checked by T17</td></tr>
+<tr><td>F15</td><td>Rod motion (rate limit)</td><td>\(x^{+}=x+\text{clamp}(x_\text{dem}-x,\,-v h,\,+v h)\)</td><td><code>plant</code></td><td>Design choice</td></tr>
+<tr><td>F16</td><td>Lumped heat balance (backward Euler)</td><td>\(MC\dot T=P-K(T-T_c)\Rightarrow T^{+}=\dfrac{T+\frac{h}{MC}(P+KT_c)}{1+\frac{hK}{MC}}\)</td><td><code>plant</code></td><td>Model form <span class="tag v">VERIFIED</span> [F12] slide 16 (fuel heat balance with a lag); one-node lumping and constants are demo choices; step <span class="tag d">DERIVED</span></td></tr>
+<tr><td>F17</td><td>Temperature feedback</td><td>\(\rho=\rho_\text{rod}+\alpha_T(T-T_\text{ref})\), \(T_\text{ref}=T_c+P_0/K\)</td><td><code>reactor</code></td><td>Form <span class="tag v">VERIFIED</span> [F11][F12]. −5 pcm/K is deliberately gentle: it gives −1.5 pcm/% power vs. −11 to −31 at Diablo Canyon [F12], because a real ≈ 3-dollar power defect would exceed the 2.2-dollar rod worth. Inside the typical MTC range 0 to −80 pcm/K [F13]; <code>PlantParams</code> should reject \(\alpha_T&gt;0\)</td></tr>
+<tr><td>F18</td><td>Period from power (windowed)</td><td>\(\tau=\dfrac{t_w}{\ln n_\text{now}-\ln n_{\text{now}-t_w}}\), with \(t_w\approx1\) s</td><td><code>instruments</code></td><td><span class="tag d">DERIVED</span></td></tr>
+<tr><td>F19</td><td>Startup rate</td><td>\(\text{SUR}=\dfrac{60}{\tau\ln10}=\dfrac{26.06}{\tau}\) DPM</td><td><code>instruments</code></td><td><span class="tag v">VERIFIED</span> [F11] Eq. 4-11</td></tr>
+<tr><td>F20</td><td>Log power</td><td>\(\log_{10}n\) (decades below or above rated)</td><td>OLED, LED bar</td><td><span class="tag d">DERIVED</span></td></tr>
+<tr><td>F21</td><td>Servo angle</td><td>\(\theta=180°\cdot x\) (withdrawn = up)</td><td><code>panel_io</code></td><td>Design choice</td></tr>
+<tr><td>F22</td><td>LED resistor</td><td>\(R=(V_{cc}-V_f)/I\); R4 needs \(I\le8\) mA, so about 1 kΩ</td><td>wiring</td><td><span class="tag v">VERIFIED</span> (PLAN §8)</td></tr>
+<tr><td>F23</td><td>Doubling time</td><td>\(DT=\tau\ln2\)</td><td>optional OLED readout</td><td><span class="tag v">VERIFIED</span> [F11]</td></tr>
+<tr><td>F24</td><td>Shutdown margin</td><td>Reactivity with all rods in; DOE says 1–5% Δk/k is typical. Design: −\$5.1 ≈ −3.3% Δk/k</td><td><code>params</code></td><td><span class="tag v">VERIFIED</span> [F11]</td></tr>
+<tr><td>F25</td><td>Inverse multiplication</td><td>\(1/M=CR_0/CR\); extrapolate to 0 to predict the critical rod position</td><td>optional startup figure</td><td><span class="tag v">VERIFIED</span> [F11] Eq. 4-5</td></tr>
+</table>
+<p class="small">S-curve self-check: \(\dfrac{d\rho}{dx}=\rho_w(1-\cos2\pi x)=2\rho_w\sin^2\pi x\). This is zero at the ends and maximum at mid-core, which matches the textbook shape.</p>
+
+<h3 id="choices">5.1 Decisions &amp; why</h3>
+<table>
+<tr><th>Decision</th><th>Choice</th><th>Why (vs. alternatives)</th></tr>
+<tr><td>Main solver</td><td><strong>Fully coupled backward Euler (F7)</strong></td><td>
+  <ul>
+    <li><strong>Stable at any step size:</strong> stiffness ratio ≈ (β/Λ)/λ₁ ≈ 65/0.0124 ≈ 5000 [F5].</li>
+    <li><strong>Exact equilibrium:</strong> with F2 initial values, numerator = denominator algebraically, so a critical core can't drift except by float rounding.</li>
+    <li><strong>Cheap:</strong> no matrix, about 60 flops.</li>
+    <li><strong>Simple to explain</strong> in a report.</li>
+  </ul></td></tr>
+<tr><td>Comparison solvers</td><td>Explicit Euler (shows the blow-up); optional exponential-precursor variant \(C_i^{+}=C_ie^{-\lambda_ih}+\frac{\beta_in}{\lambda_i\Lambda}(1-e^{-\lambda_ih})\)</td><td>These make good report figures. The piecewise-constant approximation (Kinard &amp; Allen 2004 [F6]) is the literature reference method but needs a matrix exponential, which is too heavy to justify here. Cite it as related work.</td></tr>
+<tr><td>Time step</td><td>\(h=10\) ms on the board; sweep 1–20 ms on the PC</td><td>Accurate enough for delayed-neutron time scales, and the R4 uses about 0.2% CPU. Use 10 substeps whenever \(\rho\ge\beta\) (see §5.2).</td></tr>
+<tr><td>Data set</td><td>Keepin 6-group, \(\beta=0.0065\), \(\Lambda=10^{-4}\) s</td><td>The textbook standard, so it matches Lamarsh and the class. Comment in code that this is the physical β, not \(\beta_\text{eff}\).</td></tr>
+<tr><td>Thermal model</td><td>One lumped node (F16), demo-scaled constants</td><td>Shows self-stabilization with 3 parameters. A two-node fuel/coolant model (Bickel [F12] slide 16) is a stretch goal.</td></tr>
+<tr><td>Period meter</td><td>Windowed log-power slope over 1 s (F18), smoothed</td><td>A per-step ratio \(n_k/n_{k-1}\) is about \(1+10^{-4}\), close to float precision (\(\varepsilon\approx1.2\times10^{-7}\) [P11]), so it is noisy.</td></tr>
+<tr><td>Validation reference</td><td>SciPy <code>solve_ivp(method="Radau", rtol=1e-8, atol=1e-12)</code> and the 6-group inhour root from <code>brentq</code></td><td>SciPy's docs recommend Radau/BDF for stiff systems [I15]. Use the exact inhour root, because the approximations are 20–50% off (next section).</td></tr>
+<tr><td>Source strength</td><td>\(S\approx3\times10^{-4}\ \text{s}^{-1}\)</td><td>From F13: at \(\rho=-\$5\), shutdown power is about \(10^{-6}\), which gives about 6 decades of log-power startup to watch.</td></tr>
+<tr><td>Shutdown</td><td><strong>Two rod banks:</strong> a regulating rod (pot, worth \$2.2) and a safety bank (worth about \$4, driven by SCRAM/reset)</td><td>DOE separates shim, regulating and safety rods [F11]. The regulating rod alone only reaches −\$1.1 (≈ −0.7% Δk/k), below DOE's typical 1–5% shutdown margin. Both banks in give −\$5.1 ≈ −3.3%.</td></tr>
+</table>
+
+<h3 id="gotchas">5.2 Math gotchas the code must handle</h3>
+<div class="callout warn"><strong>Approximations vs. the exact inhour equation:</strong>
+<table>
+<tr><th>Step</th><th>Exact 6-group inhour</th><th>One group, λ = 0.1 (DOE, power rising)</th><th>One group, λ = 0.08</th><th>Small-ρ formula</th></tr>
+<tr><td>+100 pcm</td><td><strong>55–57 s</strong> (Lamarsh: 57 s [F7])</td><td>55 s</td><td>69 s</td><td>85 s</td></tr>
+<tr><td>+\$0.1</td><td><strong>≈ 98 s</strong></td><td>90 s</td><td>113 s</td><td>130 s</td></tr>
+<tr><td>+\$0.5</td><td><strong>≈ 5.8 s</strong></td><td>10 s</td><td>12.5 s</td><td>26 s</td></tr>
+</table>
+DOE explains the gap: while power rises, short-lived precursors dominate, so \(\lambda_\text{eff}\) is not a constant [F11]. One group gets worse as ρ grows. <strong>Test against the exact root, not the approximations.</strong></div>
+<div class="callout bad"><strong>Implicit denominator above prompt critical.</strong> The F7 denominator is \(1-\frac{h(\rho-\beta)}{\Lambda}-\dots\). With \(h/\Lambda=100\), it becomes ≤ 0 once \(\rho-\beta\gtrsim0.01\) (about \$2.5).
+<ul>
+  <li><strong>Rule 1:</strong> if \(\rho\ge\beta\), use 10 substeps.</li>
+  <li><strong>Rule 2:</strong> assert that the denominator is > 0.</li>
+  <li><strong>Rule 3:</strong> trip immediately.</li>
+</ul>
+The rod design (max about +\$1.1) keeps you below the limit anyway.</div>
+<div class="callout warn"><strong>Float overflow and NaN.</strong> Clamp \(n\le10^{6}\). Check <code>isfinite()</code> on \(n\) and \(T\) every step, and treat non-finite values as a fault trip [P12].</div>
+<div class="callout"><strong>Thermal coupling is explicit.</strong> Feedback uses the temperature from the previous step. That's fine because the thermal time constant (about 150 s) is much slower than 10 ms.</div>
+</section>
+
+<!-- 6 -->
+<section id="core">
+<h2>6. Physics library — what goes in each file</h2>
+
+<h3 id="m-params">params.h</h3>
+<ul>
+  <li>A units comment block.</li>
+  <li><code>struct KineticsParams { int groups; float beta[6]; float lambda[6]; float Lambda; }</code>.</li>
+  <li>A <code>keepinU235()</code> function that returns the defaults. A one-group version is also handy for tests.</li>
+  <li><code>struct PlantParams</code>: rod worth \(\rho_w\), \(\rho_\text{crit}\), safety-bank worth \(\rho_s\approx\$4\), rod speed, scram speed, \(MC\), \(K\), \(T_c\), \(\alpha_T\), \(S\).</li>
+  <li><code>struct Setpoints</code>: power trip 1.20, temperature trip, period trip 10 s, warning levels.</li>
+</ul>
+<pre><code>// Units: s, normalized power (1 = 100 %), reactivity in dk/k, K.
+// beta here is physical U-235 beta, not beta_eff.
+inline KineticsParams keepinU235() {
+  KineticsParams p = {6,
+    {0.000215f,0.001424f,0.001274f,0.002568f,0.000748f,0.000273f},
+    {0.0124f,0.0305f,0.111f,0.301f,1.14f,3.01f},
+    1.0e-4f};
+  return p;
+}</code></pre>
+
+<h3 id="m-kinetics">kinetics.h / kinetics.cpp</h3>
+<ul>
+  <li><code>struct Kinetics { float n; float C[6]; };</code></li>
+  <li><code>void initEquilibrium(Kinetics&amp;, const KineticsParams&amp;, float n0);</code> (F2)</li>
+  <li><code>void stepImplicit(Kinetics&amp;, const KineticsParams&amp;, float rho, float S, float h);</code> (F7). Uses substeps when \(\rho\ge\beta\), asserts the denominator is > 0, and clamps \(n\).</li>
+  <li><code>void stepExplicit(...)</code> (F8), used only for the instability demo and tests.</li>
+  <li><code>float totalBeta(const KineticsParams&amp;)</code>.</li>
+</ul>
+
+<h3 id="m-plant">plant.h / plant.cpp</h3>
+<ul>
+  <li><code>float rodWorth(float x, const PlantParams&amp;)</code> (F14), using <code>sinf</code>.</li>
+  <li><code>float moveRod(float x, float demand, float speed, float h)</code> (F15). The SCRAM path calls it with the fast scram speed (about 1 s full stroke) and demand 0.</li>
+  <li>The safety bank is a second position \(s\in[0,1]\) that uses the same <code>moveRod</code> and S-curve. A successful reset withdraws it at normal speed; a trip drives it in at scram speed.</li>
+  <li><code>float stepTemperature(float T, float P, const PlantParams&amp;, float h)</code> (F16).</li>
+  <li><code>float feedback(float T, const PlantParams&amp;)</code> (F17).</li>
+</ul>
+<pre><code>float stepTemperature(float T, float P, const PlantParams&amp; p, float h) {
+  return (T + (h / p.MC) * (P + p.K * p.Tcool)) / (1.0f + h * p.K / p.MC);
+}</code></pre>
+
+<h3 id="m-instr">instruments.h / instruments.cpp</h3>
+<ul>
+  <li><code>struct PeriodMeter</code> holding a ring buffer of 11 samples of <code>logf(n)</code>, taken every 0.1 s (a 1 s window), plus an EMA-smoothed period.</li>
+  <li><code>void update(PeriodMeter&amp;, float n, float h)</code>. The period is reported as “∞” (a large sentinel) when \(|\Delta\ln n|\) is tiny.</li>
+  <li><code>float sur(float period)</code> (F19); <code>float logPower(float n)</code> (F20).</li>
+</ul>
+
+<h3 id="m-prot">protection.h / protection.cpp</h3>
+<ul>
+  <li>Trip bit flags: <code>TRIP_MANUAL=1, TRIP_HIGH_POWER=2, TRIP_HIGH_TEMP=4, TRIP_SHORT_PERIOD=8, TRIP_PROMPT_CRIT=16, TRIP_FAULT=32</code>.</li>
+  <li><code>uint8_t evaluate(readings, setpoints)</code> returns the new trip bits. These are OR-ed into a <strong>latched</strong> word.</li>
+  <li><code>bool tryReset(latched, rodPos)</code> only clears the latch if the rods are fully in (\(x&lt;0.01\)) and no trip condition is still present.</li>
+  <li>A warning level (not a trip) for the yellow LED and buzzer beeps: \(P&gt;1.05\), \(\tau&lt;30\) s, or high temperature.</li>
+</ul>
+
+<h3 id="m-reactor">reactor.h / reactor.cpp — the only thing firmware and CLI call</h3>
+<pre><code>struct Inputs   { float rodDemand; bool scram; bool reset; bool overrideOn; float rhoOverride; };
+struct Readings { float t, n, rho, rhoDollars, T, period, sur, logP, rod; uint8_t trips, warn; };
+
+class Reactor {
+public:
+  void init();                                // equilibrium at n0, T = Tref, rods at critical position
+  const Readings&amp; step(const Inputs&amp; in, float h);
+};</code></pre>
+<p>Order inside <code>step()</code>:</p>
+<ol>
+  <li>Move the regulating rod and the safety bank (both in at scram speed if latched).</li>
+  <li>Compute ρ = regulating rod + safety bank + feedback, or the override value.</li>
+  <li><code>stepImplicit</code>.</li>
+  <li><code>stepTemperature</code>.</li>
+  <li>Update the period meter.</li>
+  <li>Run <code>evaluate</code> and latch.</li>
+  <li>Fill in Readings.</li>
+</ol>
+</section>
+
+<!-- 7 -->
+<section id="firmware">
+<h2>7. Firmware (src/) — what goes in each file</h2>
+
+<h3>main.cpp: fixed-step loop with accumulator</h3>
+<p>The loop runs the physics in fixed 10 ms steps. Elapsed time builds up in an accumulator, and the number of catch-up steps per loop is capped so a slow OLED draw (about 25 ms) can't cause a “spiral of death” [P1][P2].</p>
+<pre><code>const uint32_t DT_MS = 10; const float DT_S = 0.010f; const uint8_t MAX_STEPS = 10;
+uint32_t lastMs, accMs;
+
+void loop() {
+  uint32_t now = millis();
+  accMs += now - lastMs; lastMs = now;            // unsigned subtraction survives millis() wrap
+  if (accMs &gt; 250) accMs = 250;
+  uint8_t steps = 0;
+  while (accMs &gt;= DT_MS &amp;&amp; steps &lt; MAX_STEPS) {
+    const Readings&amp; r = reactor.step(panel.readInputs(), DT_S);
+    panel.show(r);                                // LEDs, buzzer, servo
+    accMs -= DT_MS; ++steps;
+  }
+  handleSerialCommands();
+  every100ms(printReadings);                      // plotter / CSV / Teleplot
+  every200ms(display.draw);                       // OLED at 5 Hz
+}</code></pre>
+
+<h3>panel_io.h / panel_io.cpp</h3>
+<ul>
+  <li><strong>Pots:</strong> <code>analogRead(A0)</code>, then an EMA filter \(y\leftarrow y+0.1(x-y)\), then scale to 0–1.</li>
+  <li><strong>SCRAM button (D2):</strong> interrupt on FALLING. The ISR only sets a <code>volatile</code> flag [P3]. It needs no debounce because the trip latches anyway.</li>
+  <li><strong>Reset/acknowledge button (D3):</strong> needs a 30 ms debounce in <code>loop()</code>.</li>
+  <li><strong>LEDs:</strong>
+    <ul>
+      <li>Green: operating normally.</li>
+      <li>Blue: critical, \(|\rho|&lt;\) 5 pcm and \(|\tau|\) large.</li>
+      <li>Yellow: warning.</li>
+      <li>Red: tripped.</li>
+    </ul></li>
+  <li><strong>Buzzer:</strong> on continuously while a trip is unacknowledged; short beeps on a warning.</li>
+  <li><strong>Servo:</strong> <code>servo.write(180*x)</code>, updated only when the angle changes by ≥ 1°.</li>
+</ul>
+<pre><code>volatile bool scramPressed = false;
+void onScram() { scramPressed = true; }
+// setup(): pinMode(2, INPUT_PULLUP); attachInterrupt(digitalPinToInterrupt(2), onScram, FALLING);</code></pre>
+
+<h3>display.h / display.cpp: OLED (Adafruit SSD1306 + GFX)</h3>
+<ul>
+  <li><strong>Line 1:</strong> <code>P 102.3%  log -0.01</code></li>
+  <li><strong>Line 2:</strong> <code>rho +0.12$  rod 51%</code></li>
+  <li><strong>Line 3:</strong> <code>T 321.4K  per 112s  SUR 0.23</code></li>
+  <li><strong>Line 4:</strong> state or trip text (<code>TRIP: SHORT PERIOD</code>), shown inverted when tripped.</li>
+</ul>
+
+<h3>Serial interface (115200 baud)</h3>
+<table>
+<tr><th>Command</th><th>Effect</th></tr>
+<tr><td><code>m p</code> / <code>m c</code> / <code>m t</code></td><td>Output mode: Arduino Serial Plotter (<code>P:1.02,T:321</code>) [H10] / CSV / Teleplot (<code>&gt;P:1.02</code>) [P10]</td></tr>
+<tr><td><code>r 0.5</code></td><td>Force reactivity to +\$0.5. Lets you run V3 on hardware without touching the pot.</td></tr>
+<tr><td><code>x</code></td><td>Clear the override (back to pot control)</td></tr>
+<tr><td><code>s</code> / <code>z</code></td><td>Software SCRAM / reset</td></tr>
+<tr><td><code>b</code></td><td>Benchmark: time 1000 <code>stepImplicit</code> calls with <code>micros()</code> and print µs per step (V9)</td></tr>
+</table>
+<div class="callout warn">In <code>setup()</code>, don't wait forever for <code>Serial</code> (<code>while(!Serial)</code>). Use a timeout, or the board won't run without a PC attached.</div>
+</section>
+
+<!-- 8 -->
+<section id="desktop">
+<h2>8. Desktop CLI &amp; unit tests</h2>
+<h3>sim_cli.cpp</h3>
+<p>Example: <code>sim_cli --scenario step --rho-dollars 0.5 --dt 0.01 --method implicit --t-end 300 &gt; results/step05.csv</code></p>
+<p>Scenarios:</p>
+<ul>
+  <li><code>hold</code></li>
+  <li><code>step</code></li>
+  <li><code>ramp</code></li>
+  <li><code>scram</code></li>
+  <li><code>rodpull</code> (with feedback)</li>
+  <li><code>startup</code> (from source level). It also writes a 1/M column for an approach-to-critical plot like DOE NP-04 Fig. 1.</li>
+</ul>
+<p>It writes the shared CSV header first.</p>
+
+<h3>Test list (doctest, run with <code>ctest</code>)</h3>
+<table>
+<tr><th>#</th><th>Test</th><th>Expect</th><th>Plan ID</th></tr>
+<tr><td>T1</td><td>Critical hold, 60 000 steps</td><td>\(|n-1|&lt;10^{-4}\)</td><td>V1</td></tr>
+<tr><td>T2</td><td>Prompt jump, +\$0.31 step</td><td>\(n\approx1.44\) after about 0.1 s</td><td>V3</td></tr>
+<tr><td>T3</td><td>+100 pcm asymptotic period</td><td>Matches the inhour root (55–57 s) within 2%</td><td>V2</td></tr>
+<tr><td>T4</td><td>+\$0.1 and +\$0.5 periods</td><td>Within 2% of the inhour root</td><td>V3</td></tr>
+<tr><td>T5</td><td>SCRAM to −\$5</td><td>Prompt drop ≈ \(\beta/(\beta-\rho)=1/6\); late period → about −80 s</td><td>V4</td></tr>
+<tr><td>T6</td><td>Explicit Euler on a +$0.1 step, \(h=40\) ms vs 20 ms</td><td>40 ms diverges (|n| > 10⁶ or sign flips); 20 ms stays bounded. The limit is \(2\Lambda/(\beta-\rho)\approx34\) ms</td><td>V7</td></tr>
+<tr><td>T7</td><td>Halve \(h\)</td><td>Error about halves (first order)</td><td>V6</td></tr>
+<tr><td>T8</td><td>Subcritical with source</td><td>\(n\to-S\Lambda/\rho\) (F13)</td><td>—</td></tr>
+<tr><td>T9</td><td>Rod worth endpoints and midpoint</td><td>0, \(\rho_w\), \(\rho_w/2\)</td><td>—</td></tr>
+<tr><td>T10</td><td>Rod rate limit</td><td>Never moves more than \(v h\) per step</td><td>—</td></tr>
+<tr><td>T11</td><td>Thermal steady state</td><td>\(T\to T_c+P/K\)</td><td>—</td></tr>
+<tr><td>T12</td><td>Feedback, +\$0.2 pull, run 1800 s</td><td>ΔT ≈ 26 K, power about 1.9×, net ρ within 1 pcm of 0. First peak ~80% above final (n ≈ 3.4 at 60 s), no sustained ringing [F12]; record the overshoot</td><td>V8</td></tr>
+<tr><td>T13</td><td>Trip latch and reset</td><td>Latch holds; reset only with rods in</td><td>—</td></tr>
+<tr><td>T14</td><td>Prompt critical</td><td>Trips, no NaN, denominator stays > 0</td><td>—</td></tr>
+<tr><td>T15</td><td>Period meter on a known exponential</td><td>Recovers τ within 1%</td><td>—</td></tr>
+<tr><td>T16</td><td>Subcritical: −\$2 → −\$1 (halve ρ)</td><td>Steady level about doubles (DOE NP-04 example: 42 → 83 cps for −1000 → −500 pcm)</td><td>—</td></tr>
+<tr><td>T17</td><td>Rod S-curve vs. DOE Example 3 integral data (scaled to 260 pcm over 16 in)</td><td>Every point within 3% of total worth; midpoint exactly half</td><td>—</td></tr>
+<tr><td>T18</td><td>Overcooling: rod fixed at full power, \(T_c\) lowered 10 K, run 1800 s</td><td>\(T\to T_\text{ref}\) and \(P\to1+10/30\approx1.33\) (cooler coolant adds reactivity) [F13]</td><td>—</td></tr>
+</table>
+<pre><code>#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+#include "kinetics.h"
+
+TEST_CASE("critical reactor holds power") {
+  KineticsParams p = keepinU235(); Kinetics k; initEquilibrium(k, p, 1.0f);
+  for (int i = 0; i &lt; 60000; ++i) stepImplicit(k, p, 0.0f, 0.0f, 0.01f);
+  CHECK(k.n == doctest::Approx(1.0f).epsilon(1e-4));
+}</code></pre>
+<p class="small">Use <code>CHECK</code> to continue after a failure and <code>REQUIRE</code> to stop; <code>doctest::Approx(...).epsilon()</code> is a relative tolerance [P5].</p>
+</section>
+
+<!-- 9 -->
+<section id="python">
+<h2>9. Python tools</h2>
+<table>
+<tr><th>File</th><th>Does</th></tr>
+<tr><td><code>reference.py</code></td><td>Same 7 ODEs, plus the thermal and feedback model, solved with <code>solve_ivp(method="Radau", rtol=1e-8, atol=1e-12)</code>. Writes CSV with the same columns. Has an <code>inhour_root(rho)</code> helper using <code>scipy.optimize.brentq</code>.</td></tr>
+<tr><td><code>compare.py</code></td><td>Overlays the C++ or board output on the reference and plots relative error. Also makes the convergence plot (error vs \(h\), log-log) and the stability plot. Saves PNGs to <code>figures/</code>.</td></tr>
+<tr><td><code>capture_serial.py</code></td><td>Opens the board in CSV mode and writes <code>results/board_*.csv</code>. Always set a <code>timeout</code>, and use <code>python -m serial.tools.list_ports</code> to find the COM port [P14].</td></tr>
+<tr><td><code>requirements.txt</code></td><td><code>numpy</code>, <code>scipy</code>, <code>matplotlib</code>, <code>pyserial</code></td></tr>
+</table>
+<pre><code>def rhs(t, y, rho_of_t, p):
+    n, C = y[0], y[1:]
+    rho = rho_of_t(t)
+    dn = (rho - p.beta) / p.Lam * n + np.dot(p.lam, C) + p.S
+    dC = p.beta_i / p.Lam * n - p.lam * C
+    return np.concatenate(([dn], dC))
+
+def inhour_root(rho, p):          # positive stable period for 0 &lt; rho &lt; beta
+    f = lambda T: p.Lam / T + np.sum(p.beta_i / (1 + p.lam * T)) - rho
+    return brentq(f, 1e-6, 1e7)</code></pre>
+</section>
+
+<!-- 10 -->
+<section id="config">
+<h2>10. Config files</h2>
+<h3>platformio.ini</h3>
+<pre><code>[platformio]
+default_envs = uno_r4_minima
+
+[env:uno_r4_minima]
+platform  = renesas-ra
+board     = uno_r4_minima
+framework = arduino
+monitor_speed = 115200
+lib_deps =
+  adafruit/Adafruit SSD1306
+  adafruit/Adafruit GFX Library
+  Servo
+build_flags = -Wall -Wextra -Wdouble-promotion -Wfloat-conversion -Wshadow</code></pre>
+<p class="small">The platform, board and library names are verified [I8][I16][I17]. Servo lists <code>renesas_uno</code> support [I18]. Whether the bare name <code>Servo</code> picks up the bundled library on R4 is <span class="tag u">UNVERIFIED</span>; if the build can't find it, use <code>arduino-libraries/Servo</code>. PlatformIO finds <code>lib/reactor/src</code> automatically [I14][I19].</p>
+
+<h3>CMakeLists.txt</h3>
+<pre><code>cmake_minimum_required(VERSION 3.16)
+project(reactor_sim CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-Wall -Wextra -Wdouble-promotion -Wfloat-conversion -Wshadow)
+
+file(GLOB REACTOR_SRC lib/reactor/src/*.cpp)
+add_library(reactor ${REACTOR_SRC})
+target_include_directories(reactor PUBLIC lib/reactor/src)
+
+add_executable(sim_cli desktop/sim_cli.cpp)
+target_link_libraries(sim_cli PRIVATE reactor)
+
+file(GLOB TEST_SRC tests/*.cpp)
+add_executable(unit_tests ${TEST_SRC})
+target_include_directories(unit_tests PRIVATE third_party)
+target_link_libraries(unit_tests PRIVATE reactor)
+
+enable_testing()
+add_test(NAME unit_tests COMMAND unit_tests)</code></pre>
+
+<h3>.gitignore</h3>
+<p>Based on GitHub's C++ and Python templates [P15][P16]:</p>
+<pre><code>build/
+cmake-build-*/
+.pio/
+.venv/
+__pycache__/
+results/*.csv
+.vscode/*
+!.vscode/extensions.json</code></pre>
+
+<h3>README.md outline</h3>
+<p>Adapted from makeareadme.com [P18]:</p>
+<ol>
+  <li>Title and one-sentence pitch, plus a photo or GIF of the panel.</li>
+  <li>What and why: the physics runs <em>on the board</em>.</li>
+  <li>Physics model: the main equations, linking to <code>docs/</code>.</li>
+  <li>Hardware: BOM, wiring diagram, pin map.</li>
+  <li>Build and run: the CMake, PlatformIO and Python commands.</li>
+  <li>Validation results: the error-vs-SciPy figure, inhour table, timing numbers.</li>
+  <li>Limitations and future work.</li>
+  <li>References and license.</li>
+</ol>
+</section>
+
+<!-- 11 -->
+<section id="rules">
+<h2>11. Coding rules (so it runs the same on PC and board)</h2>
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td><code>float</code> only; write literals with <code>f</code> (<code>0.5f</code>); use <code>sinf</code>/<code>expf</code>/<code>logf</code></td><td>The Cortex-M4 FPU handles single precision; <code>double</code> is emulated in software. <code>-Wdouble-promotion</code> catches slips [P4].</td></tr>
+<tr><td>No STL, <code>new</code>, exceptions or <code>iostream</code> in <code>lib/reactor</code></td><td>Keeps it Arduino-portable, with no heap fragmentation</td></tr>
+<tr><td>No <code>millis()</code>/<code>delay()</code> in the physics; pass <code>h</code> in</td><td>That is what makes the code testable on the PC</td></tr>
+<tr><td>No <code>delay()</code> anywhere in the firmware</td><td>It would stall the physics clock [P2]</td></tr>
+<tr><td>ISR variables are <code>volatile</code>; keep ISRs to one line</td><td>Arduino reference [P3]</td></tr>
+<tr><td>Never compare floats with <code>==</code>; use <code>doctest::Approx</code></td><td>\(\varepsilon_\text{float}\approx1.19\times10^{-7}\) [P11]</td></tr>
+<tr><td><code>isfinite()</code> guard on the state every step</td><td>NaN should trip the reactor rather than spread silently [P12]</td></tr>
+<tr><td>One header comment per file giving its job, and units on every parameter</td><td>Readers (and future you) need units to check the math</td></tr>
+<tr><td>Build with zero warnings</td><td>The warning flags catch real float bugs</td></tr>
+</table>
+</section>
+
+<!-- 12 -->
+<section id="milestones">
+<h2>12. Milestones &amp; definition of done</h2>
+<table>
+<tr><th>#</th><th>Milestone</th><th>Done when</th><th>≈ Effort</th></tr>
+<tr><td>M0</td><td>Tools and skeleton</td><td>All §3 checks pass; a dummy test passes in <code>ctest</code>; repo pushed</td><td>3 h</td></tr>
+<tr><td>M1</td><td>Kinetics core</td><td>T1, T2, T5, T6, T7 pass</td><td>6 h</td></tr>
+<tr><td>M2</td><td>Python reference</td><td><code>compare.py</code> overlay within 1%; T3 and T4 pass with the inhour root</td><td>5 h</td></tr>
+<tr><td>M3</td><td>Plant, instruments, protection</td><td>T8–T15 pass; <code>sim_cli</code> runs all scenarios</td><td>8 h</td></tr>
+<tr><td>M4</td><td>Board bring-up</td><td>Blink, then pot, buttons, LEDs, buzzer and servo each work on their own</td><td>4 h</td></tr>
+<tr><td>M5</td><td>Firmware integration</td><td>The physics runs on the R4; plotter shows power; SCRAM latches; benchmark reports µs per step</td><td>6 h</td></tr>
+<tr><td>M6</td><td>OLED and serial commands</td><td>Display at 5 Hz without losing physics time (check the step counter against <code>millis()</code>)</td><td>4 h</td></tr>
+<tr><td>M7</td><td>Hardware validation and write-up</td><td>Board CSV vs SciPy figure, README with results, demo video</td><td>8 h</td></tr>
+<tr><th colspan="3">Total</th><th>≈ 44 h</th></tr>
+</table>
+<div class="callout"><strong>Stretch goals</strong> (only after M7). DOE Vol. 2 [F11] and Bickel [F12] supply the data:
+<ul>
+  <li><strong>Two-node feedback:</strong> a fuel node with \(\tau_f\approx\) 3–5 s and a Doppler coefficient, plus a slower coolant node with the moderator coefficient [F12].</li>
+  <li><strong>Decay heat:</strong> about 5–6% of power right after shutdown, under 1% after one hour.</li>
+  <li><strong>Xenon-135:</strong> I-135 half-life 6.57 h, Xe-135 half-life 9.10 h, \(\sigma_a=2.6\times10^6\) b. Xenon peaks about 10–12 h after shutdown (DOE about 10 h, Bickel about 11.6 h). This needs a time-acceleration mode.</li>
+</ul></div>
+</section>
+
+<!-- 13 -->
+<section id="cites">
+<h2>13. Citations</h2>
+<h3>Formulas</h3>
+<ul class="cites">
+  <li>[F1] Wikipedia, “Point kinetics equations” — https://en.wikipedia.org/wiki/Point_kinetics_equations. Note: carries an LLM-content banner (Nov 2026), so check its numbers against its cited textbooks.</li>
+  <li>[F2] Wikipedia, “Inhour equation” — https://en.wikipedia.org/wiki/Inhour_equation</li>
+  <li>[F3] Wikipedia, “Delayed neutron” — https://en.wikipedia.org/wiki/Delayed_neutron</li>
+  <li>[F4] IAEA NDS, Nuclear Data for Safeguards, Table A-6 — https://nds.iaea.org/sgnucdat/a6.htm</li>
+  <li>[F5] Wikipedia, “Stiff equation” — https://en.wikipedia.org/wiki/Stiff_equation</li>
+  <li>[F6] J. E. Kinard &amp; E. J. Allen, “Efficient numerical solution of the point kinetics equations in nuclear reactor dynamics,” <em>Ann. Nucl. Energy</em> 31(9):1039–1051 (2004), doi:10.1016/j.anucene.2003.12.008</li>
+  <li>[F7] Wikipedia, “Prompt criticality” — https://en.wikipedia.org/wiki/Prompt_criticality</li>
+  <li>[F8] Textbooks: Keepin, <em>Physics of Nuclear Kinetics</em> (1965); Lamarsh &amp; Baratta, <em>Introduction to Nuclear Engineering</em>; Duderstadt &amp; Hamilton, <em>Nuclear Reactor Analysis</em>, ch. 6; Lewis, <em>Fundamentals of Nuclear Reactor Physics</em>, ch. 5 and 9</li>
+  <li>[F10] U.S. DOE, <em>DOE Fundamentals Handbook: Nuclear Physics and Reactor Theory</em>, Vol. 1 of 2, DOE-HDBK-1019/1-93, Module NP-02, “Prompt and Delayed Neutrons,” Table 3, pp. 29–30 — https://www.energy.gov/sites/default/files/2026-04/DOE-HDBK-1019-93_VOL1.pdf</li>
+  <li>[F11] U.S. DOE, <em>DOE Fundamentals Handbook: Nuclear Physics and Reactor Theory</em>, Vol. 2 of 2, DOE-HDBK-1019/2-93 (Jan. 1993). Module NP-03: reactivity pp. 17–22, coefficients pp. 23–29, control rods pp. 48–58. Module NP-04: subcritical multiplication pp. 1–9, kinetics pp. 10–22 (Table 1 p. 12), operation pp. 23–34. Checked from a PDF copy, 2026-11-20 — https://web.archive.org/web/20170914172136/https://energy.gov/sites/prod/files/2013/06/f2/h1019v2.pdf</li>
+  <li>[F12] J. H. Bickel, <em>Fundamentals of Nuclear Engineering</em>, Module 10, “Power Reactor Feedback Effects,” Rev. 01 (lecture slides; NRC ADAMS ML12142A130). Plant data from the Diablo Canyon and Dresden FSARs. Checked from a PDF copy, 2026-11-20 — https://www.nrc.gov/docs/ML1214/ML12142A130.pdf</li>
+  <li>[F13] nuclear-power.com, “Moderator Temperature Coefficient – MTC” (secondary; typical MTC 0 to −80 pcm/°C, steam-line-break lower limit; quotes NRC NUREG-0800 SRP 4.3) — https://www.nuclear-power.com/nuclear-power/reactor-physics/nuclear-fission-chain-reaction/reactivity-coefficients-reactivity-feedbacks/moderator-temperature-coefficient-mtc/</li>
+  <li>[F9] Related work (from the Crossref reference list of [F6]): Chao &amp; Attard, NSE 90, doi:10.13182/NSE85-7; da Nóbrega, NSE 46, doi:10.13182/NSE71-A22373; Sánchez, NSE 103, doi:10.13182/NSE89-A23663</li>
+</ul>
+<h3>Install / tools</h3>
+<ul class="cites">
+  <li>[I1] https://www.msys2.org/</li>
+  <li>[I2] https://code.visualstudio.com/docs/cpp/config-mingw</li>
+  <li>[I3] https://cmake.org/download/</li>
+  <li>[I4] https://git-scm.com/install/windows</li>
+  <li>[I5] https://www.python.org/downloads/windows/</li>
+  <li>[I6] https://docs.python.org/3/library/venv.html</li>
+  <li>[I7] https://docs.platformio.org/en/latest/integration/ide/vscode.html</li>
+  <li>[I8] https://docs.platformio.org/en/latest/boards/renesas-ra/uno_r4_minima.html</li>
+  <li>[I9] https://github.com/doctest/doctest</li>
+  <li>[I10] https://www.arduino.cc/en/software</li>
+  <li>[I11] https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools</li>
+  <li>[I12] https://marketplace.visualstudio.com/items?itemName=ms-python.python</li>
+  <li>[I13] https://marketplace.visualstudio.com/items?itemName=Wokwi.wokwi-vscode</li>
+  <li>[I14] https://docs.platformio.org/en/latest/projectconf/sections/platformio/options/directory/test_dir.html</li>
+  <li>[I15] https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html</li>
+  <li>[I16] https://registry.platformio.org/libraries/adafruit/Adafruit%20SSD1306</li>
+  <li>[I17] https://registry.platformio.org/libraries/adafruit/Adafruit%20GFX%20Library</li>
+  <li>[I18] https://raw.githubusercontent.com/arduino-libraries/Servo/master/library.properties</li>
+  <li>[I19] https://docs.platformio.org/en/latest/librarymanager/ldf.html</li>
+  <li>[I20] https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/setting-your-commit-email-address</li>
+</ul>
+<h3>Practices</h3>
+<ul class="cites">
+  <li>[P1] G. Fiedler, “Fix Your Timestep!” — https://gafferongames.com/post/fix_your_timestep/</li>
+  <li>[P2] Arduino, Blink Without Delay — https://docs.arduino.cc/built-in-examples/digital/BlinkWithoutDelay/</li>
+  <li>[P3] Arduino, attachInterrupt — https://docs.arduino.cc/language-reference/en/functions/external-interrupts/attachInterrupt/</li>
+  <li>[P4] GCC warning options — https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html</li>
+  <li>[P5] doctest assertions — https://github.com/doctest/doctest/blob/master/doc/markdown/assertions.md</li>
+  <li>[P6] PlatformIO build_flags — https://docs.platformio.org/en/latest/projectconf/sections/env/options/build/build_flags.html</li>
+  <li>[P10] Teleplot extension — https://marketplace.visualstudio.com/items?itemName=alexnesnes.teleplot</li>
+  <li>[P11] cppreference, float limits — https://en.cppreference.com/w/cpp/types/climits</li>
+  <li>[P12] cppreference, isfinite — https://en.cppreference.com/w/cpp/numeric/math/isfinite</li>
+  <li>[P13] doctest build systems — https://github.com/doctest/doctest/blob/master/doc/markdown/build-systems.md</li>
+  <li>[P14] pyserial short intro — https://pyserial.readthedocs.io/en/latest/shortintro.html</li>
+  <li>[P15] GitHub C++.gitignore — https://github.com/github/gitignore/blob/main/C%2B%2B.gitignore</li>
+  <li>[P16] GitHub Python.gitignore — https://github.com/github/gitignore/blob/main/Python.gitignore</li>
+  <li>[P17] Conventional Commits — https://www.conventionalcommits.org/en/v1.0.0/</li>
+  <li>[P18] Make a README — https://www.makeareadme.com/</li>
+  <li>[P19] MIT license — https://choosealicense.com/licenses/mit/</li>
+  <li>[P20] PlatformIO unit testing — https://docs.platformio.org/en/latest/advanced/unit-testing/index.html</li>
+  <li>[P21] J. Grenning, <em>Test-Driven Development for Embedded C</em> — https://pragprog.com/titles/jgade/test-driven-development-for-embedded-c/</li>
+  <li>[H10] Arduino IDE 2 Serial Plotter — https://docs.arduino.cc/software/ide-v2/tutorials/ide-v2-serial-plotter/</li>
+</ul>
+</section>
+
+<!-- 14 -->
+<section id="unverified">
+<h2>14. Not yet verified — check before relying on it</h2>
+<h3>Physics</h3>
+<ul>
+  <li>The exact sine form of the rod curve. The S shape is verified; the formula is a fit, checked by T17.</li>
+  <li>Bickel's plant coefficients [F12] come from two specific FSARs. Quote them as examples, not as typical values.</li>
+  <li>The MTC range 0 to −80 pcm/°C and the NRC "non-positive at power" wording come from [F13], a secondary site. Check the wording in NUREG-0800 SRP 4.3 before quoting it.</li>
+  <li>Benchmark tables from Kinard &amp; Allen and Ganapol (paywalled; don't quote numbers from memory).</li>
+</ul>
+<h3>Tooling</h3>
+<ul>
+  <li>The MSYS2 pacman names for CMake and Ninja.</li>
+  <li>Whether the bare name <code>Servo</code> in <code>lib_deps</code> resolves on R4.</li>
+  <li>Adafruit SSD1306 on R4 (no known problem, but it isn't listed as supported).</li>
+  <li>Whether Windows needs a USB driver for the R4.</li>
+  <li>Whether R4 native-USB serial ignores the baud rate.</li>
+  <li>The doctest <code>IMPLEMENT_WITH_MAIN</code> macro (widely used, but the tutorial page wasn't fetched).</li>
+</ul>
+<h3>Next sources to try</h3>
+<ul>
+  <li>MIT OCW 22.05 lecture PDFs (Lec 12–14, 23).</li>
+  <li>The NEA WPEC-6 delayed-neutron report: https://www.oecd-nea.org/upload/docs/application/pdf/2019-12/volume6.pdf</li>
+</ul>
+</section>
+
+</main>
+</div>
+</body>
+</html>
