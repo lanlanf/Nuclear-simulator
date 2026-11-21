@@ -41,6 +41,49 @@ TEST_CASE("TEST-01 facade +$0.2 rod pull settles with feedback") {
   CHECK(fabs(out.rho) < 1.0e-5);
 }
 
+// note: per-step loop duplicated in TUNE-01/02 (two uses).
+TEST_CASE("TUNE-01 +$0.2 rod step from full power stays below the trips") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.rodDemand = rodFor(0.2f * 0.0065f);
+  double maxN = 0.0, maxT = 0.0, minPeriod = PERIOD_INF;
+  uint8_t trips = 0;
+  for (int i = 0; i < 30000; ++i) {
+    const Readings& out = r.step(in, 0.01f);
+    maxN = fmax(maxN, out.n);
+    maxT = fmax(maxT, out.T);
+    if (out.period > 0.0f) minPeriod = fmin(minPeriod, out.period);
+    trips |= out.trips;
+  }
+  INFO("TUNE-01 maxN " << maxN << " maxT " << maxT << " minPeriod " << minPeriod);
+  CHECK(trips == 0);
+  CHECK(maxN < 1.20);
+  CHECK(maxT < 330.0);
+  CHECK(minPeriod >= 10.0);
+}
+
+TEST_CASE("TUNE-02 -5 K coolant step from full power stays below the trips") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.Tcool = 285.0f;
+  double maxN = 0.0, maxT = 0.0, minPeriod = PERIOD_INF;
+  uint8_t trips = 0;
+  for (int i = 0; i < 30000; ++i) {
+    const Readings& out = r.step(in, 0.01f);
+    maxN = fmax(maxN, out.n);
+    maxT = fmax(maxT, out.T);
+    if (out.period > 0.0f) minPeriod = fmin(minPeriod, out.period);
+    trips |= out.trips;
+  }
+  INFO("TUNE-02 maxN " << maxN << " maxT " << maxT << " minPeriod " << minPeriod);
+  CHECK(trips == 0);
+  CHECK(maxN < 1.20);
+  CHECK(maxT < 330.0);
+  CHECK(minPeriod >= 10.0);
+}
+
 TEST_CASE("TEST-01 facade Tcool 280 overcooling") {
   Reactor r;
   REQUIRE(r.init(defaultPlant(), RELAXED));
