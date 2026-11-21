@@ -36,8 +36,9 @@ TEST_CASE("TEST-01 facade +$0.2 rod pull settles with feedback") {
   in.rodDemand = rodFor(0.2f * 0.0065f);
   const Readings out = runFor(r, in, 1800.0);
   CHECK(out.trips == 0);
-  CHECK(out.T - 320.0 == doctest::Approx(26.0).epsilon(0.03));
-  CHECK(out.n == doctest::Approx(1.867).epsilon(0.02));
+  const double dT = 0.2 * 0.0065 / -defaultPlant().alphaT;
+  CHECK(out.T - 320.0 == doctest::Approx(dT).epsilon(0.03));
+  CHECK(out.n == doctest::Approx(1.0 + dT * defaultPlant().K).epsilon(0.02));
   CHECK(fabs(out.rho) < 1.0e-5);
 }
 
@@ -220,6 +221,37 @@ TEST_CASE("T13 trip latches; reset only with rods and rod demand in") {
   CHECK(after.trips == 0);
   CHECK(after.rho < 0.0f);
   CHECK(after.n < 0.1f);
+}
+
+TEST_CASE("TUNE-03 cold core, rod in, safety bank out: stays below -$1 for 300 s") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.scram = true;
+  r.step(in, 0.01f);
+  in.scram = false;
+  in.rodDemand = 0.0f;
+  runFor(r, in, 2.0);
+  in.reset = true;
+  REQUIRE(r.step(in, 0.01f).trips == 0);
+  in.reset = false;
+  // Bank withdraws in 1 / rodSpeed s; fuel cools to Tcool long before that.
+  const Readings start = runFor(r, in, 1.0 / defaultPlant().rodSpeed + 10.0);
+  REQUIRE(start.T < 290.5f);  // source-level power holds fuel ~0.1 K above Tcool
+  REQUIRE(start.rod < 1e-6f);
+  CHECK(start.rhoDollars < -1.0f);
+  double maxN = 0.0, maxRho = -1e9;
+  uint8_t trips = 0;
+  for (int i = 0; i < 30000; ++i) {
+    const Readings& out = r.step(in, 0.01f);
+    maxN = fmax(maxN, out.n);
+    maxRho = fmax(maxRho, out.rhoDollars);
+    trips |= out.trips;
+  }
+  INFO("start rho $" << start.rhoDollars << " n " << start.n << " maxN " << maxN);
+  CHECK(maxRho < -1.0);
+  CHECK(maxN <= start.n * (1.0 + 1e-6));
+  CHECK(trips == 0);
 }
 
 TEST_CASE("SAFE-02 scram and reset in the same step stays tripped") {

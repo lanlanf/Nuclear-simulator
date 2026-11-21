@@ -59,9 +59,9 @@ TEST_CASE("T9 rod worth: 0, rho_w/2, rho_w at the ends and midpoint; critical at
   CHECK(PP.rhoW * sCurve(0.5f) == doctest::Approx(PP.rhoW / 2));
   CHECK(PP.rhoW * sCurve(1.0f) == doctest::Approx(PP.rhoW));
   CHECK(fabs(rodWorth(0.5f, PP)) < 1e-9);
-  CHECK(rodWorth(0.0f, PP) / 0.0065 == doctest::Approx(-1.1));
+  CHECK(rodWorth(0.0f, PP) / 0.0065 == doctest::Approx(-4.5));
   CHECK(safetyWorth(1.0f, PP) == doctest::Approx(0.0));
-  CHECK((rodWorth(0.0f, PP) + safetyWorth(0.0f, PP)) / 0.0065 == doctest::Approx(-5.1));
+  CHECK((rodWorth(0.0f, PP) + safetyWorth(0.0f, PP)) / 0.0065 == doctest::Approx(-8.5));
 }
 
 TEST_CASE("T10 rod rate limit") {
@@ -105,16 +105,16 @@ TEST_CASE("T11 thermal steady state T = Tc + P / K") {
 TEST_CASE("T12 +$0.2 rod pull settles where feedback cancels it") {
   const float rodRho = 0.2f * 0.0065f;
   const PlantRun r = runPlant(rodFor(rodRho), PP.Tcool, 1800.0);
-  const double dT = rodRho / -PP.alphaT;  // 26 K
+  const double dT = rodRho / -PP.alphaT;  // 1.73 K
   CHECK(r.T - PP.Tref == doctest::Approx(dT).epsilon(0.02));
-  CHECK(r.n == doctest::Approx(1.0 + dT * PP.K).epsilon(0.02));  // 1.87
+  CHECK(r.n == doctest::Approx(1.0 + dT * PP.K).epsilon(0.02));  // 1.058
   CHECK(fabs(r.rho) < 1.0e-5);
-  // With a 150 s thermal lag the first overshoot is large (about 80 %, matches
+  // With a 7.5 s thermal lag the first overshoot is about 11 % at 2.3 s (matches
   // tools/reference.py); the requirement is that the ringing dies out.
   const double overshoot = r.maxN / r.n - 1.0;
   INFO("T12 overshoot " << overshoot * 100.0 << " %, peak at " << r.tPeak << " s");
-  CHECK(overshoot == doctest::Approx(0.81).epsilon(0.10));
-  CHECK(r.tPeak == doctest::Approx(60.0).epsilon(0.25));
+  CHECK(overshoot == doctest::Approx(0.111).epsilon(0.10));
+  CHECK(r.tPeak == doctest::Approx(2.3).epsilon(0.25));
   CHECK(fabs(r.nAt540 / r.n - 1.0) < 0.02);
   CHECK(r.lateSpread / r.n < 0.01);
 }

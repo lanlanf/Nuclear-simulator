@@ -39,16 +39,16 @@ struct PlantParams {
 
 inline PlantParams defaultPlant() {
   PlantParams p;
-  p.rhoW = 2.2f * DOLLAR;
+  p.rhoW = 9.0f * DOLLAR;
   p.rhoCrit = 0.5f * p.rhoW;
   p.rhoS = 4.0f * DOLLAR;
-  p.rodSpeed = 0.02f;
+  p.rodSpeed = 0.0049f;
   p.scramSpeed = 1.0f;
-  p.MC = 5.0f;
+  p.MC = 0.25f;
   p.K = 1.0f / 30.0f;
   p.Tcool = 290.0f;
   p.Tref = 320.0f;  // Tcool + 1 / K: full power at the critical rod position
-  p.alphaT = -5.0e-5f;
+  p.alphaT = -7.5e-4f;
   p.S = 3.0e-4f;
   return p;
 }

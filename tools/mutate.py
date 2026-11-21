@@ -50,7 +50,7 @@ MUTATIONS = [  # id, file, old, new
     ("M22", I, "    if (m.count < PERIOD_SAMPLES) return;\n", ""),
     ("M23", I, "EMA = 0.2f;", "EMA = 1.0f;"),
     ("M24", PL, "const float maxStep = speed * h;", "const float maxStep = 0.5f * speed * h;"),
-    ("M25", P, "p.MC = 5.0f;", "p.MC = 1.5f;"),
+    ("M25", P, "p.MC = 0.25f;", "p.MC = 0.075f;"),
     ("M26", K, "rho >= beta ? 10 : 1;", "1;"),
     ("M27", PR, "if (rhoDollars >= 1.0f)", "if (rhoDollars > 1.05f)"),
     ("M28", P, "Setpoints s = {1.20f,", "Setpoints s = {1.50f,"),
