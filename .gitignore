@@ -6,3 +6,6 @@ __pycache__/
 results/*.csv
 .vscode/*
 !.vscode/extensions.json
+
+# GSD planning docs (local only)
+.planning/
