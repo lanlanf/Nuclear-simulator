@@ -29,11 +29,11 @@ bool Reactor::init(const PlantParams& plant, const Setpoints& sp) {
 }
 
 const Readings& Reactor::step(const Inputs& in, float h) {
-  if (in.scram) latched_ |= TRIP_MANUAL;
-  if (in.reset && latched_ != 0) {
+  if (in.reset && !in.scram && latched_ != 0) {
     // The rod pot must be in too, or the rod would run out on its own after reset.
     tryReset(latched_, rod_ > in.rodDemand ? rod_ : in.rodDemand, present_);
   }
+  if (in.scram) latched_ |= TRIP_MANUAL;
 
   // 1. Rods: both banks in at scram speed while tripped.
   if (latched_ != 0) {

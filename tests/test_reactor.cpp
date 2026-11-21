@@ -79,6 +79,22 @@ TEST_CASE("T13 trip latches; reset only with rods and rod demand in") {
   CHECK(after.n < 0.1f);
 }
 
+TEST_CASE("SAFE-02 scram and reset in the same step stays tripped") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  runFor(r, in, 1.0);
+  in.scram = true;
+  in.rodDemand = 0.0f;
+  runFor(r, in, 2.0);  // rods fully in
+
+  in.reset = true;
+  CHECK((r.step(in, 0.01f).trips & TRIP_MANUAL) != 0);
+  CHECK((r.step(in, 0.01f).trips & TRIP_MANUAL) != 0);
+  in.scram = false;
+  CHECK(r.step(in, 0.01f).trips == 0);  // plain reset still works
+}
+
 TEST_CASE("T14 prompt critical trips with finite readings, then shuts down") {
   Reactor r;
   REQUIRE(r.init());
