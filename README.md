@@ -80,6 +80,10 @@ Python as PlatformIO so it trusts the Windows certificate store.
 
 ### Wiring
 
+![Wiring plan](docs/wiring.png)
+
+Full diagram with parts list: [docs/wiring.svg](docs/wiring.svg).
+
 | Pin | Part | Notes |
 |---|---|---|
 | A0 | Rod pot | Rod demand 0–1 |
@@ -94,8 +98,9 @@ Python as PlatformIO so it trusts the Windows certificate store.
 | D9 | Servo | Rod position |
 | SDA/SCL | SSD1306 OLED | I²C address 0x3C |
 
-Use a series resistor on each LED. Power the servo from its own 5 V supply and
-connect that supply's ground to the Arduino's.
+R4 pins supply at most 8 mA: use 470 Ω on each LED and drive the buzzer
+through an NPN transistor (1 kΩ base resistor). Power the servo from its own
+5 V supply and connect that supply's ground to the Arduino's.
 
 ### Serial commands
 
