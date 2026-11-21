@@ -152,6 +152,16 @@ TEST_CASE("TEST-02 T14 substeps carry $3") {
   CHECK(isfinite(k.n));
 }
 
+TEST_CASE("TEST-04 V3 prompt jump $0.1 and $0.5") {
+  const float dollars[] = {0.1f, 0.5f};
+  for (float d : dollars) {
+    Kinetics k;
+    initEquilibrium(k, P, 1.0f);
+    run(k, d * 0.0065f, 0.0f, 0.001f, 100);  // 0.1 s
+    CHECK(k.n == doctest::Approx(1.0 / (1.0 - d)).epsilon(0.03));
+  }
+}
+
 TEST_CASE("T16 halving a subcritical rho doubles the source-driven level") {
   const float S = 3.0e-4f;
   const float rho2 = -2.0f * 0.0065f;

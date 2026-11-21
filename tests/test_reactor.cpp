@@ -282,3 +282,157 @@ TEST_CASE("Fast rod withdrawal trips on high power, not on a fault") {
   CHECK((out.trips & (TRIP_HIGH_POWER | TRIP_SHORT_PERIOD)) != 0);
   CHECK((out.trips & TRIP_FAULT) == 0);
 }
+
+TEST_CASE("TEST-04 tryReset refuses while a condition is present") {
+  uint8_t latched = TRIP_HIGH_TEMP;
+  CHECK_FALSE(tryReset(latched, 0.0f, TRIP_HIGH_TEMP));
+  CHECK(latched == TRIP_HIGH_TEMP);
+  CHECK_FALSE(tryReset(latched, 0.01f, 0));
+  CHECK(latched == TRIP_HIGH_TEMP);
+  CHECK(tryReset(latched, 0.0f, 0));
+  CHECK(latched == 0);
+}
+
+TEST_CASE("TEST-04 facade HIGH_TEMP reset refused until T < 330") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.Tcool = 340.0f;
+  Readings out = runFor(r, in, 300.0);
+  REQUIRE((out.trips & TRIP_HIGH_TEMP) != 0);
+  in.rodDemand = 0.0f;
+  out = runFor(r, in, 2.0);  // rods in, still hot
+  REQUIRE(out.T > 330.0f);
+  in.reset = true;
+  CHECK(r.step(in, 0.01f).trips != 0);
+  in.Tcool = 290.0f;
+  float prevT = r.step(in, 0.01f).T;
+  bool cleared = false;
+  for (int i = 0; i < 60000 && !cleared; ++i) {
+    out = r.step(in, 0.01f);
+    if (out.trips == 0) {
+      cleared = true;
+      CHECK(prevT <= 330.0f);
+    }
+    prevT = out.T;
+  }
+  CHECK(cleared);
+}
+
+TEST_CASE("TEST-04 scram inserts both banks within 1 s") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.scram = true;
+  CHECK(runFor(r, in, 0.5).rhoDollars < -2.5f);
+  CHECK(runFor(r, in, 0.5).rhoDollars < -4.95f);
+}
+
+TEST_CASE("TEST-04 override bypasses power, temp, period; not PROMPT_CRIT") {
+  {
+    Reactor r;
+    REQUIRE(r.init());
+    Inputs in;
+    in.overrideOn = true;
+    in.rhoOverride = 0.5f * 0.0065f;
+    const Readings out = runFor(r, in, 20.0);
+    CHECK((out.trips & TRIP_HIGH_POWER) == 0);
+    CHECK((out.trips & TRIP_SHORT_PERIOD) == 0);
+    in.overrideOn = false;
+    const Readings off = r.step(in, 0.01f);
+    CHECK((off.trips & TRIP_HIGH_POWER) != 0);
+    CHECK((off.trips & TRIP_SHORT_PERIOD) != 0);
+  }
+  {
+    Reactor r;
+    REQUIRE(r.init());
+    Inputs in;
+    in.overrideOn = true;
+    in.Tcool = 340.0f;
+    const Readings out = runFor(r, in, 120.0);
+    REQUIRE(out.T > 330.0f);
+    CHECK((out.trips & TRIP_HIGH_TEMP) == 0);
+    in.overrideOn = false;
+    CHECK((r.step(in, 0.01f).trips & TRIP_HIGH_TEMP) != 0);
+  }
+  {
+    Reactor r;
+    REQUIRE(r.init());
+    Inputs in;
+    in.overrideOn = true;
+    in.rhoOverride = 1.2f * 0.0065f;
+    CHECK((r.step(in, 0.01f).trips & TRIP_PROMPT_CRIT) != 0);
+  }
+}
+
+TEST_CASE("TEST-04 plant parameter validation and init on a tripped reactor") {
+  PlantParams p = defaultPlant();
+  p.MC = 0.0f;
+  CHECK_FALSE(isValid(p));
+  p = defaultPlant();
+  p.K = -1.0f;
+  CHECK_FALSE(isValid(p));
+  p = defaultPlant();
+  p.alphaT = 0.0f;
+  CHECK(isValid(p));
+
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.scram = true;
+  r.step(in, 0.01f);
+  in.scram = false;
+  PlantParams bad = defaultPlant();
+  bad.MC = 0.0f;
+  CHECK_FALSE(r.init(bad));
+  CHECK((r.step(in, 0.01f).trips & TRIP_MANUAL) != 0);
+}
+
+TEST_CASE("TEST-04 sur and logPower edges") {
+  CHECK(sur(-80.0f) == doctest::Approx(-0.326).epsilon(0.005));
+  CHECK(fabs(sur(PERIOD_INF)) < 1e-6);
+  CHECK(logPower(0.0f) == doctest::Approx(-30.0));
+  CHECK(isfinite(logPower(-1.0f)));
+}
+
+static void feed(PeriodMeter& m, double tau, double& t, int steps) {
+  for (int i = 0; i < steps; ++i) {
+    t += 0.01;
+    update(m, static_cast<float>(exp(t / tau)), 0.01f);
+  }
+}
+
+TEST_CASE("TEST-04 period meter warm-up, infinity band, EMA lag, n = 0") {
+  PeriodMeter m;
+  initPeriodMeter(m);
+  double t = 0.0;
+  feed(m, 20.0, t, 100);
+  CHECK(m.period == PERIOD_INF);  // window not full yet
+  feed(m, 20.0, t, 20);
+  CHECK(m.period == doctest::Approx(20.0).epsilon(0.02));
+
+  initPeriodMeter(m);
+  t = 0.0;
+  feed(m, 2.0e4, t, 3000);
+  CHECK(m.period == PERIOD_INF);
+  initPeriodMeter(m);
+  t = 0.0;
+  feed(m, 5000.0, t, 3000);
+  CHECK(m.period < PERIOD_INF);
+  CHECK(m.period == doctest::Approx(5000.0).epsilon(0.05));
+
+  initPeriodMeter(m);
+  for (int i = 0; i < 300; ++i) update(m, 1.0f, 0.01f);
+  t = 0.0;
+  feed(m, 20.0, t, 100);
+  CHECK(m.period > 25.0f);  // EMA still catching up
+  feed(m, 20.0, t, 400);
+  CHECK(m.period == doctest::Approx(20.0).epsilon(0.01));
+
+  initPeriodMeter(m);
+  for (int i = 0; i < 300; ++i) update(m, 0.0f, 0.01f);
+  CHECK(m.period == PERIOD_INF);
+  for (int i = 0; i < 300; ++i) update(m, 1.0f, 0.01f);
+  for (int i = 0; i < 300; ++i) update(m, 0.0f, 0.01f);
+  CHECK(isfinite(m.period));
+}
