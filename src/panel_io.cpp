@@ -23,7 +23,7 @@ static const uint32_t DEBOUNCE_MS = 30;
 static volatile bool scramPressed = false;
 static void onScram() { scramPressed = true; }
 
-static float readPot(uint8_t pin) { return static_cast<float>(analogRead(pin)) / 1023.0f; }
+static float readPot(uint8_t pin) { return static_cast<float>(analogRead(pin)) / 16383.0f; }
 
 void Panel::begin() {
   pinMode(PIN_SCRAM, INPUT_PULLUP);
@@ -35,6 +35,7 @@ void Panel::begin() {
     digitalWrite(pin, LOW);
   }
   servo_.attach(PIN_SERVO);
+  analogReadResolution(14);
   rodPot_ = readPot(PIN_ROD_POT);
   coolPot_ = readPot(PIN_COOL_POT);
 }

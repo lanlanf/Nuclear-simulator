@@ -63,11 +63,16 @@ static void benchmark() {
   const uint32_t start = micros();
   for (int i = 0; i < 1000; ++i) stepImplicit(k, p, 0.0f, 0.0f, DT_S);
   const uint32_t us = micros() - start;
+  const uint32_t drawStart = micros();
+  display.draw(*last, overrideOn);  // 0 us when no OLED answered
+  const uint32_t drawUs = micros() - drawStart;
   char a[24], b[24], buf[160];
   dtostrf(static_cast<float>(us) / 1000.0f, 0, 2, a);
   dtostrf(k.n, 0, 6, b);
   sendFormatted(buf, sizeof buf,
-                snprintf(buf, sizeof buf, "# stepImplicit: %s us per step (n = %s)\r\n", a, b));
+                snprintf(buf, sizeof buf, "# stepImplicit: %s us per step (n = %s), draw: %lu us\r\n",
+                         a, b, static_cast<unsigned long>(drawUs)));
+  lastMs = millis();
 }
 
 static void handleCommand(const char* cmd) {
@@ -96,6 +101,10 @@ static void handleCommand(const char* cmd) {
   } else if (!strcmp(cmd, "z")) {
     softReset = true;
   } else if (!strcmp(cmd, "b")) {
+    if (last == nullptr || last->trips == 0) {
+      sendText("# error: b only while tripped\r\n");
+      return;
+    }
     benchmark();
   } else if (cmd[0] != '\0') {
     sendText("# commands: m p|m c|m t, r <dollars>, x, s, z, b\r\n");
