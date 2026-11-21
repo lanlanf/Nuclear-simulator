@@ -1,0 +1,8 @@
+build/
+cmake-build-*/
+.pio/
+.venv/
+__pycache__/
+results/*.csv
+.vscode/*
+!.vscode/extensions.json
