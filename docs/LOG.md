@@ -59,3 +59,36 @@ comparison tools, and the firmware.
   `sim_cli`.
 - Decide whether to reduce the overshoot (for example a smaller MC) or keep it
   as a teaching point.
+
+## 2026-11-20: demo retune (Phase 2, TUNE-01..03)
+
+### Parameter changes (`params.h` and `tools/reference.py`)
+
+| Parameter | Old | New | Reason |
+|---|---|---|---|
+| MC | 5 | 0.25 | Thermal lag τ = MC/K was 150 s, so feedback arrived too late and a +$0.2 rod step overshot to n 1.68–2.16. τ is now 7.5 s. |
+| αT | −5e-5 | −7.5e-4 dk/k/K | Holds the +$0.2 rod step and the −5 K coolant step below the 1.20 trip. |
+| ρ_w (regulating rod) | $2.2 | $9 | Shutdown margin. A cold core (290 K, ΔT −30 K) now adds +$3.46 of feedback. With ρ_w $2.2 the rod alone gave −$1.1, and the core went critical again after a reset. Now the rod in, cold, with the bank out gives −$1.05. |
+| Rod speed | 0.02 /s | 0.0049 /s | = 0.02 × 2.2/9, which keeps the $/s at the critical position the same. At 0.01 /s the rod step trips on period (5.5 s). |
+
+Setpoints, ρ_S, scram speed, K, Tref and Tcool are unchanged.
+
+### Sweep (reference.py, 300 s from full power)
+
+| Case | Peak n | Min period |
+|---|---|---|
+| αT only (MC 5), rod +$0.2 | 1.68–2.16 | — |
+| αT only (MC 5), coolant −5 K | ≈1.213 (all αT) | — |
+| MC 0.25, αT −7.5e-4, rod +$0.2 | 1.176 | 11.4 s |
+| MC 0.25, αT −7.5e-4, coolant −5 K | 1.167 | 13.2 s |
+| ρ_w $9, speed 0.0049: same two cases | 1.176 / 1.167 | 11.4 / 13.2 s |
+| ρ_w $9, speed 0.01, rod +$0.2 | — | 5.5 s (trips) |
+
+Grid MC 0.2–0.5 × αT −6e-4..−1.5e-3: the rod-step minimum period is about 11–12 s for every combination. Rod speed limits it, not feedback.
+
+C++ facade, default setpoints: TUNE-01 maxN 1.177, maxT 321.7 K, min period 12.05 s. TUNE-02 maxN 1.167, min period 15.0 s. Neither trips. Cold (rod in, bank out) holds ρ at −$1.05 and power falls for 300 s.
+
+### Notes
+
+- **Period margin is thin:** the 10 s period trip is only about 1.4 s (reference) to 2 s (C++) below the rod-step minimum. Faster rods or a larger step will trip.
+- **Hardware (Phase 3):** $0.2 is now about 1.1 % of pot travel, roughly 11 ADC counts at 10 bits. A full stroke takes about 205 s.
