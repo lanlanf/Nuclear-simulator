@@ -1,6 +1,6 @@
-# Nuclear Reactor Simulator
+# Nuclear Reactor Simulator (Personal Project)
 
-ENGR 217 project: a point-kinetics reactor simulator running in real time on an
+A point-kinetics reactor simulator running in real time on an
 Arduino UNO R4 Minima. It has a hardware control panel (control-rod pot,
 coolant pot, SCRAM and reset buttons, status LEDs, buzzer, rod-position servo
 and an SSD1306 OLED). The same physics library builds on the desktop for unit
