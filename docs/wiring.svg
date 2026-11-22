@@ -2,7 +2,7 @@
   <!-- Pin map matches src/panel_io.cpp. Red = 5 V, black = GND, colors = signals. -->
   <rect width="1400" height="1160" fill="#ffffff"/>
   <text x="30" y="42" font-size="26" font-weight="700" fill="#1b1f24">Nuclear Reactor Simulator — Wiring Plan</text>
-  <text x="30" y="68" font-size="14" fill="#5b6470">Arduino UNO R4 Minima · pins match src/panel_io.cpp</text>
+  <text x="30" y="68" font-size="14" fill="#5b6470">ELEGOO UNO R4 WiFi (R4 Minima wires the same) · pins match src/panel_io.cpp</text>
 
   <!-- Power rails (breadboard style), joined along the bottom -->
   <path d="M60 170 V880 H1340 V170" fill="none" stroke="#d62728" stroke-width="4"/>
@@ -19,7 +19,7 @@
   <text x="840" y="232" font-size="11" fill="#fff" text-anchor="middle">USB-C</text>
   <text x="840" y="246" font-size="10" fill="#d8f3f5" text-anchor="middle">to laptop</text>
   <text x="700" y="440" font-size="26" font-weight="700" fill="#fff" text-anchor="middle">Arduino</text>
-  <text x="700" y="470" font-size="20" fill="#fff" text-anchor="middle">UNO R4 Minima</text>
+  <text x="700" y="470" font-size="20" fill="#fff" text-anchor="middle">UNO R4 WiFi</text>
   <text x="700" y="498" font-size="13" fill="#d8f3f5" text-anchor="middle">runs the reactor physics</text>
   <text x="700" y="516" font-size="13" fill="#d8f3f5" text-anchor="middle">every 10 ms</text>
 
@@ -136,7 +136,7 @@
   <path d="M1040 288 L1060 300 V310 H1310" fill="none" stroke="#222" stroke-width="2.5"/>
   <polygon points="1060,300 1049,299 1054,291" fill="#333"/>
   <circle cx="1310" cy="310" r="5" fill="#222"/>
-  <text x="1086" y="278" font-size="12" font-weight="700" fill="#1b1f24">NPN transistor 2N2222</text>
+  <text x="1086" y="278" font-size="12" font-weight="700" fill="#1b1f24">NPN transistor PN2222</text>
   <text x="1086" y="294" font-size="10" fill="#5b6470">check datasheet for E-B-C leg order</text>
   <rect x="1020" y="175" width="180" height="50" rx="8" fill="#f3e8ff" stroke="#9467bd" stroke-width="2"/>
   <text x="1110" y="197" font-size="13" font-weight="700" fill="#1b1f24" text-anchor="middle">Active buzzer (5 V)</text>
@@ -146,7 +146,7 @@
   <circle cx="1340" cy="195" r="5" fill="#d62728"/>
   <text x="1210" y="188" font-size="12" font-weight="700" fill="#d62728">+</text>
 
-  <!-- LEDs: pin → 470 Ω → LED → GND -->
+  <!-- LEDs: pin → 1 kΩ (or 2×220 Ω) → LED → GND -->
   <g id="leds">
     <path d="M887 360 H950" stroke="#9467bd" stroke-width="3"/>
     <path d="M950 360 l5 -7 l10 14 l10 -14 l10 14 l10 -14 l10 14 l5 -7" fill="none" stroke="#333" stroke-width="2"/>
@@ -154,7 +154,7 @@
     <polygon points="1060,349 1060,371 1082,360" fill="#2ca02c" stroke="#333"/>
     <line x1="1082" y1="349" x2="1082" y2="371" stroke="#333" stroke-width="3"/>
     <path d="M1082 360 H1310" stroke="#222" stroke-width="2.5"/><circle cx="1310" cy="360" r="5" fill="#222"/>
-    <text x="980" y="346" font-size="11" fill="#333" text-anchor="middle">470 Ω</text>
+    <text x="980" y="346" font-size="11" fill="#333" text-anchor="middle">1 kΩ</text>
     <text x="1100" y="352" font-size="12" fill="#1b1f24"><tspan font-weight="700">Green LED</tspan> — normal</text>
     <text x="1060" y="386" font-size="9" fill="#5b6470">long leg (+) faces the resistor</text>
 
@@ -164,7 +164,7 @@
     <polygon points="1060,404 1060,426 1082,415" fill="#f2c200" stroke="#333"/>
     <line x1="1082" y1="404" x2="1082" y2="426" stroke="#333" stroke-width="3"/>
     <path d="M1082 415 H1310" stroke="#222" stroke-width="2.5"/><circle cx="1310" cy="415" r="5" fill="#222"/>
-    <text x="980" y="401" font-size="11" fill="#333" text-anchor="middle">470 Ω</text>
+    <text x="980" y="401" font-size="11" fill="#333" text-anchor="middle">1 kΩ</text>
     <text x="1100" y="407" font-size="12" fill="#1b1f24"><tspan font-weight="700">Yellow LED</tspan> — warning</text>
 
     <path d="M887 470 H950" stroke="#9467bd" stroke-width="3"/>
@@ -173,7 +173,7 @@
     <polygon points="1060,459 1060,481 1082,470" fill="#d62728" stroke="#333"/>
     <line x1="1082" y1="459" x2="1082" y2="481" stroke="#333" stroke-width="3"/>
     <path d="M1082 470 H1310" stroke="#222" stroke-width="2.5"/><circle cx="1310" cy="470" r="5" fill="#222"/>
-    <text x="980" y="456" font-size="11" fill="#333" text-anchor="middle">470 Ω</text>
+    <text x="980" y="456" font-size="11" fill="#333" text-anchor="middle">1 kΩ</text>
     <text x="1100" y="462" font-size="12" fill="#1b1f24"><tspan font-weight="700">Red LED</tspan> — tripped</text>
 
     <path d="M887 525 H950" stroke="#9467bd" stroke-width="3"/>
@@ -182,7 +182,7 @@
     <polygon points="1060,514 1060,536 1082,525" fill="#1f77b4" stroke="#333"/>
     <line x1="1082" y1="514" x2="1082" y2="536" stroke="#333" stroke-width="3"/>
     <path d="M1082 525 H1310" stroke="#222" stroke-width="2.5"/><circle cx="1310" cy="525" r="5" fill="#222"/>
-    <text x="980" y="511" font-size="11" fill="#333" text-anchor="middle">470 Ω</text>
+    <text x="980" y="511" font-size="11" fill="#333" text-anchor="middle">1 kΩ</text>
     <text x="1100" y="517" font-size="12" fill="#1b1f24"><tspan font-weight="700">Blue LED</tspan> — critical (steady)</text>
   </g>
 
@@ -198,10 +198,17 @@
   <path d="M1240 670 H1310" stroke="#222" stroke-width="3"/><circle cx="1310" cy="670" r="5" fill="#222"/>
   <text x="1275" y="662" font-size="10" fill="#333" text-anchor="middle">GND (brown)</text>
   <path d="M1100 700 V760" stroke="#d62728" stroke-width="3"/>
-  <text x="1108" y="734" font-size="10" fill="#d62728">V+ (red wire)</text>
+  <text x="1092" y="734" font-size="10" fill="#d62728" text-anchor="end">V+ (red wire)</text>
+  <!-- Servo supply capacitors: 2 × 470 µF in parallel, + to V+, − (stripe) to GND -->
+  <path d="M1100 748 H1150" stroke="#d62728" stroke-width="3"/><circle cx="1100" cy="748" r="5" fill="#d62728"/>
+  <line x1="1150" y1="736" x2="1150" y2="760" stroke="#333" stroke-width="3"/>
+  <line x1="1160" y1="736" x2="1160" y2="760" stroke="#333" stroke-width="3"/>
+  <path d="M1160 748 H1310" stroke="#222" stroke-width="2.5"/><circle cx="1310" cy="748" r="5" fill="#222"/>
+  <text x="1140" y="740" font-size="11" font-weight="700" fill="#d62728">+</text>
+  <text x="1236" y="740" font-size="11" font-weight="700" fill="#1b1f24" text-anchor="middle">2 × 470 µF</text>
   <rect x="1040" y="760" width="200" height="70" rx="8" fill="#fff0f0" stroke="#d62728" stroke-width="2"/>
   <text x="1140" y="782" font-size="13" font-weight="700" fill="#1b1f24" text-anchor="middle">Servo power 5–6 V</text>
-  <text x="1140" y="799" font-size="10" fill="#5b6470" text-anchor="middle">4×AA pack or 5 V USB supply</text>
+  <text x="1140" y="799" font-size="10" fill="#5b6470" text-anchor="middle">kit power module or 4×AA pack</text>
   <text x="1140" y="815" font-size="10" font-weight="700" fill="#d62728" text-anchor="middle">not the Arduino 5V pin</text>
   <path d="M1240 810 H1310" stroke="#222" stroke-width="3"/><circle cx="1310" cy="810" r="5" fill="#222"/>
   <text x="1252" y="804" font-size="12" font-weight="700" fill="#333">−</text>
@@ -210,19 +217,19 @@
   <rect x="30" y="925" width="1340" height="220" rx="10" fill="#f7f9fc" stroke="#cfd8e3"/>
   <text x="50" y="952" font-size="16" font-weight="700" fill="#1b1f24">Parts to order</text>
   <g font-size="12.5" fill="#1b1f24">
-    <text x="50" y="978">1. Arduino UNO R4 Minima (ABX00080) + USB-C data cable — 1</text>
-    <text x="50" y="998">2. 0.96" SSD1306 OLED, I²C, 4 pins (GND VCC SCL SDA) — 1</text>
-    <text x="50" y="1018">3. 10 kΩ linear potentiometer (B10K) with knob — 2</text>
-    <text x="50" y="1038">4. Push buttons (12 mm tactile; a big red one for SCRAM is fun) — 2</text>
-    <text x="50" y="1058">5. 5 mm LEDs: green, yellow, red, blue — 1 each</text>
-    <text x="50" y="1078">6. Resistors: 470 Ω × 4, 1 kΩ × 1</text>
-    <text x="710" y="978">7. Active buzzer, 5 V (longer leg = +) — 1</text>
-    <text x="710" y="998">8. NPN transistor 2N2222 or PN2222A — 1</text>
-    <text x="710" y="1018">9. SG90 micro servo — 1</text>
-    <text x="710" y="1038">10. 4×AA battery holder or 5 V USB breakout (servo power) — 1</text>
-    <text x="710" y="1058">11. Full-size breadboard + male-to-male jumper wires — 1 kit</text>
-    <text x="710" y="1078" fill="#5b6470">An Arduino starter kit usually covers items 3–9 and 11.</text>
+    <text x="50" y="978">1. ELEGOO UNO R4 WiFi Super Starter Kit (Amazon B0GV391HB3) — 1</text>
+    <text x="50" y="998">2. ELEGOO 0.96" SSD1306 OLED, I²C (B0D2RMQQHR, 3-pack) — 1 used</text>
+    <text x="50" y="1018">3. Flutesan 10 kΩ trim pot with knob (B09L5MGNFZ, 24-pc) — 2 used</text>
+    <text x="50" y="1038">4. 470 µF 50 V capacitor (E-Projects B07YN5SZF4, 5-pc) — 2 used</text>
+    <text x="50" y="1058">5. Push buttons — 2 (kit)</text>
+    <text x="50" y="1078">6. 5 mm LEDs: green, yellow, red, blue — 1 each (kit)</text>
+    <text x="710" y="978">7. Resistors: 1 kΩ × 5, or 2 × 220 Ω in series per LED (kit)</text>
+    <text x="710" y="998">8. Active buzzer, 5 V (longer leg = +) — 1 (kit)</text>
+    <text x="710" y="1018">9. NPN transistor PN2222 — 1 (kit)</text>
+    <text x="710" y="1038">10. SG90 micro servo — 1 (kit)</text>
+    <text x="710" y="1058">11. Servo supply: kit breadboard power module or 4×AA pack — 1</text>
+    <text x="710" y="1078" fill="#5b6470">12. Breadboard + jumper wires (kit). Total ≈ $71.65, prices 2026-11-21.</text>
   </g>
-  <text x="50" y="1110" font-size="12" fill="#b3261e"><tspan font-weight="700">Rules: </tspan>R4 pins supply at most 8 mA, so the buzzer goes through the transistor and LED resistors stay ≥ 470 Ω. Give the servo its own supply and join its − to GND.</text>
+  <text x="50" y="1110" font-size="12" fill="#b3261e"><tspan font-weight="700">Rules: </tspan>R4 pins supply at most 8 mA, so the buzzer goes through the transistor and each LED gets 1 kΩ (never a single 220 or 330 Ω). Servo on its own supply, − joined to GND.</text>
   <text x="50" y="1130" font-size="12" fill="#5b6470">If a knob works backwards, swap its two outer legs. Wire with the USB unplugged.</text>
 </svg>

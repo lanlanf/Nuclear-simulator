@@ -171,23 +171,25 @@ void pkeStep(float rho, float h, float S) {
 
 **Recommendation:** prototype in **Wokwi on R3**, then build on **R4 Minima**. The implicit solver fits on the R3, but the R4 has much more headroom for 6 groups, feedback and display. Measure `micros()` per step on both and report it.
 
+**As built:** the **ELEGOO UNO R4 WiFi** from a starter kit. It has the same RA4M1 chip, 32 kB RAM and 8 mA pin limit as the Minima, so the firmware is unchanged. PlatformIO environment: `uno_r4_wifi` (19 % RAM, 31 % flash).
+
 ### 4.2 Bill of materials
 
-| Item | Qty | Purpose | Approx. cost |
-|---|---|---|---|
-| Arduino Uno R4 Minima (or R3) | 1 | Solver + I/O | ~$20–27 [H3] (US price not verified) |
-| Breadboard + jumper wires | 1 + ~40 | Prototyping | ~$8 |
-| 10 kΩ linear potentiometer | 2 | Rod position; optional coolant flow | ~$2 |
-| 5 mm LEDs (green, yellow, red, blue) | 4+ | Status lights | ~$1 |
-| Resistors: 220 Ω / 330 Ω (R3) or 1 kΩ (R4) | assorted | LED current limiting | ~$1 |
-| Tactile pushbutton | 2 | SCRAM and reset/acknowledge | ~$1 |
-| Piezo buzzer (active = simplest; passive = choose your own pitch) | 1 | Alarm | ~$2 |
-| SG90 / SG92R micro servo | 1 | Rod position indicator | ~$6 [H6] |
-| 5 V ≥1 A supply + 470–1000 µF capacitor | 1 | Separate servo power | ~$6 |
-| *Optional:* SSD1306 OLED or 16×2 I2C LCD | 1 | Readouts for power, period and temperature | ~$6–10 |
-| *Optional:* 10-segment LED bar graph | 1 | **Log-power** display (one segment per decade) | ~$3 |
+Ordered from Amazon. Prices checked 2026-11-21 (Black Friday).
 
-**Estimated total:** about $45–70. Prices other than the Arduino store [H3] and Adafruit [H6] are rough and not verified.
+| Item | Qty used | Purpose | Price |
+|---|---|---|---|
+| [ELEGOO UNO R4 WiFi Super Starter Kit](https://www.amazon.com/dp/B0GV391HB3) | 1 | Board, breadboard, jumpers, LEDs, resistors, buttons, active buzzer, PN2222 transistor, SG90 servo, breadboard power module | $45.99 (list $59.99) |
+| [Flutesan 10 kΩ trim pots with knobs, 24-pc](https://www.amazon.com/dp/B09L5MGNFZ) | 2 | Rod and coolant knobs (the kit has only one pot). Linear, 270°, round breadboard pins | $9.99 ($9.49 Prime) |
+| [E-Projects 470 µF 50 V electrolytic, 5-pc](https://www.amazon.com/dp/B07YN5SZF4) | 2 | Across the servo supply; two in parallel ≈ 940 µF | $7.18 |
+| [ELEGOO 0.96" SSD1306 OLED, I²C, 3-pc](https://www.amazon.com/dp/B0D2RMQQHR) | 1 | Readouts for power, period and temperature (0x3C, 3.3–5 V) | $8.49 |
+| *Optional, not ordered:* 10-segment LED bar graph | 1 | **Log-power** display (one segment per decade) | ~$3 |
+
+**Total:** $71.65 before tax ($71.15 with the Prime pot price). Over $35, so shipping is free.
+
+- **LED resistors:** the kit has no 470 Ω. Use 1 kΩ (≈3 mA) or two 220 Ω in series (≈7 mA). Never a single 220 Ω or 330 Ω on an R4 pin.
+- **Capacitors:** put them right at the servo supply, long leg (+) to servo 5 V and striped leg (−) to GND. The 50 V rating is fine at 5 V.
+- **Servo power:** the kit's breadboard power module or a 4×AA pack, never the Arduino 5 V pin.
 
 ### 4.3 Pin map (same on R3 and R4)
 
@@ -250,7 +252,7 @@ loop():
 1. **Desk physics:** write a Python reference solver (SciPy) and the one-group model, and reproduce the §2.5 table.
 2. **Wokwi prototype:** wire the potentiometer, LEDs, buzzer, servo and button on a virtual Uno R3, then port the solver [H11][H12].
 3. **Six groups + implicit Euler:** run V1–V4 and V6–V7 on the simulated board.
-4. **Buy parts and build** on the R4 Minima. Measure µs per step.
+4. **Buy parts and build** on the R4 (ELEGOO UNO R4 WiFi, see §4.2). Measure µs per step.
 5. **Feedback + trips + log-power/SUR display:** run V8.
 6. **Validation write-up:** V5 plots, error analysis and a demo video.
 

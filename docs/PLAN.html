@@ -398,21 +398,16 @@ void pkeStep(float rho, float h, float S) {
 <section id="hardware">
 <h2>8. Hardware</h2>
 <h3>8.1 Bill of materials</h3>
+<p>Ordered from Amazon; prices checked 2026-11-21 (Black Friday). Built on the <strong>ELEGOO UNO R4 WiFi</strong>: same RA4M1 chip as the Minima, so the firmware is unchanged (PlatformIO env <code>uno_r4_wifi</code>).</p>
 <table>
-<tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Approx. cost</th></tr>
-<tr><td>Arduino Uno R4 Minima (or R3)</td><td>1</td><td>Solver + I/O</td><td>~$20–27 <span class="tag u">U</span></td></tr>
-<tr><td>Breadboard + jumper wires</td><td>1 + ~40</td><td>Prototyping</td><td>~$8</td></tr>
-<tr><td>10 kΩ linear potentiometer</td><td>2</td><td>Rod position; coolant flow (optional)</td><td>~$2</td></tr>
-<tr><td>5 mm LEDs (green, yellow, red, blue)</td><td>4+</td><td>Status</td><td>~$1</td></tr>
-<tr><td>Resistors: 220/330 Ω (R3) or 1 kΩ (R4)</td><td>assorted</td><td>LED current limiting</td><td>~$1</td></tr>
-<tr><td>Tactile pushbutton</td><td>2</td><td>SCRAM, reset/acknowledge</td><td>~$1</td></tr>
-<tr><td>Piezo buzzer (active = simplest)</td><td>1</td><td>Alarm</td><td>~$2</td></tr>
-<tr><td>SG90/SG92R micro servo</td><td>1</td><td>Rod position indicator</td><td>~$6 <span class="tag v">V</span></td></tr>
-<tr><td>5 V ≥1 A supply + 470–1000 µF capacitor</td><td>1</td><td>Separate servo power</td><td>~$6</td></tr>
-<tr><td><em>Optional:</em> SSD1306 OLED or 16×2 I2C LCD</td><td>1</td><td>Readouts</td><td>~$6–10</td></tr>
-<tr><td><em>Optional:</em> 10-segment LED bar graph</td><td>1</td><td>Log-power display</td><td>~$3</td></tr>
+<tr><th>Item</th><th>Qty used</th><th>Purpose</th><th>Price</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GV391HB3">ELEGOO UNO R4 WiFi Super Starter Kit</a></td><td>1</td><td>Board, breadboard, jumpers, LEDs, resistors, buttons, active buzzer, PN2222, SG90 servo, breadboard power module</td><td>$45.99 (list $59.99)</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B09L5MGNFZ">Flutesan 10 kΩ trim pots with knobs, 24-pc</a></td><td>2</td><td>Rod and coolant knobs (kit has one pot)</td><td>$9.99 ($9.49 Prime)</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B07YN5SZF4">E-Projects 470 µF 50 V electrolytic, 5-pc</a></td><td>2</td><td>Across the servo supply (≈ 940 µF in parallel)</td><td>$7.18</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D2RMQQHR">ELEGOO 0.96" SSD1306 OLED, I²C, 3-pc</a></td><td>1</td><td>Readouts (0x3C, 3.3–5 V)</td><td>$8.49</td></tr>
+<tr><td><em>Optional, not ordered:</em> 10-segment LED bar graph</td><td>1</td><td>Log-power display</td><td>~$3</td></tr>
 </table>
-<p><strong>Estimated total:</strong> about $45–70.</p>
+<p><strong>Total:</strong> $71.65 before tax. The kit has no 470 Ω resistor: use 1 kΩ (or two 220 Ω in series) per LED. Servo power comes from the kit's breadboard power module or a 4×AA pack, never the Arduino 5 V pin.</p>
 
 <h3>8.2 Pin map (same on R3 and R4)</h3>
 <table>

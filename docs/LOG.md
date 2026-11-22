@@ -1,5 +1,17 @@
 # Project log
 
+## 2026-11-21: parts list finalized
+
+**Board:** ELEGOO UNO R4 WiFi (starter kit). It has the same RA4M1 chip as the
+Minima, so the firmware is unchanged; added the PlatformIO env `uno_r4_wifi`.
+It compiles at 19 % RAM (6.3 kB) and 31 % flash (81 kB).
+
+**Amazon order ($71.65):** the ELEGOO kit, Flutesan 10 kΩ trim pots (24-pc),
+E-Projects 470 µF 50 V caps (5-pc) and an ELEGOO SSD1306 OLED (3-pc). Links
+are in [PLAN.md §4.2](PLAN.md#42-bill-of-materials). The kit has no 470 Ω
+resistor, so the LEDs use 1 kΩ; the wiring diagram now shows 2 × 470 µF across
+the servo supply.
+
 ## 2026-11-20: first full code drop
 
 **Built:** physics library, 23 unit tests, `sim_cli`, SciPy reference and

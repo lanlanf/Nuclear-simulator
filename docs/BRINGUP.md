@@ -2,8 +2,8 @@
 
 ## 1. Before power
 
-- [ ] Parts on the bench match docs/wiring.svg (UNO R4, 2 pots, 2 buttons, active buzzer + NPN, 4 LEDs, servo, SSD1306 OLED).
-- [ ] Upload: `.\.venv\Scripts\pio.exe run -t upload`
+- [ ] Parts on the bench match docs/wiring.svg (ELEGOO UNO R4 WiFi, 2 pots, 2 buttons, active buzzer + NPN, 4 LEDs with 1 kΩ, servo + 2 × 470 µF, SSD1306 OLED).
+- [ ] Upload: `.\.venv\Scripts\pio.exe run -e uno_r4_wifi -t upload`
 - [ ] Monitor: `.\.venv\Scripts\pio.exe device monitor` (115200 baud)
 - [ ] Banner `# reactor simulator ready ...` appears (or `# no OLED found, continuing without it` if the OLED is not wired).
 

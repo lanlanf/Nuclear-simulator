@@ -1,8 +1,8 @@
 # Nuclear Reactor Simulator (Personal Project)
 
-A point-kinetics reactor simulator running in real time on an
-Arduino UNO R4 Minima. It has a hardware control panel (control-rod pot,
-coolant pot, SCRAM and reset buttons, status LEDs, buzzer, rod-position servo
+A point-kinetics reactor simulator running in real time on an Arduino UNO R4
+(built on the ELEGOO UNO R4 WiFi; the R4 Minima also works). It has a hardware
+control panel (control-rod pot, coolant pot, SCRAM and reset buttons, status LEDs, buzzer, rod-position servo
 and an SSD1306 OLED). The same physics library builds on the desktop for unit
 tests and for validation against a SciPy reference.
 
@@ -70,10 +70,13 @@ python -m venv .venv
 Build and upload with PlatformIO (VS Code extension or CLI):
 
 ```powershell
-pio run                 # compile
-pio run -t upload       # flash the UNO R4 Minima
-pio device monitor      # 115200 baud
+pio run -e uno_r4_wifi              # compile for the ELEGOO UNO R4 WiFi
+pio run -e uno_r4_wifi -t upload    # flash it (use -e uno_r4_minima for a Minima)
+pio device monitor                  # 115200 baud
 ```
+
+Both boards use the same RA4M1 chip, so the firmware is identical. Parts list
+with Amazon links: [docs/PLAN.md §4.2](docs/PLAN.md#42-bill-of-materials).
 
 On a network that intercepts TLS, install `pip-system-certs` into the same
 Python as PlatformIO so it trusts the Windows certificate store.
@@ -98,9 +101,10 @@ Full diagram with parts list: [docs/wiring.svg](docs/wiring.svg).
 | D9 | Servo | Rod position |
 | SDA/SCL | SSD1306 OLED | I²C address 0x3C |
 
-R4 pins supply at most 8 mA: use 470 Ω on each LED and drive the buzzer
-through an NPN transistor (1 kΩ base resistor). Power the servo from its own
-5 V supply and connect that supply's ground to the Arduino's.
+R4 pins supply at most 8 mA: use 1 kΩ (or two 220 Ω in series) on each LED and
+drive the buzzer through an NPN transistor (1 kΩ base resistor). Power the
+servo from its own 5 V supply with two 470 µF capacitors across it, and connect
+that supply's ground to the Arduino's.
 
 ### Serial commands
 
