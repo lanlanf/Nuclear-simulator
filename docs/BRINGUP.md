@@ -11,8 +11,8 @@
 
 | Element | Pin | Action | Expected | Pass |
 |---|---|---|---|---|
-| Rod pot | A0 | Turn full range | Plotter `rod:` goes 0 → 100 | [ ] |
-| Coolant pot | A1 | Turn full range | T trends within 280–300 K | [ ] |
+| Rod pot | A0 | Turn full range, then back to centre | Plotter `dem:` goes 0 → 100 smoothly (`rod:` only follows at 205 s per stroke) | [ ] |
+| Coolant pot | A1 | Turn full range | Plotter `Tc_minus_300:` goes −20 → 0 | [ ] |
 | SCRAM button | D2 | Press | Red LED on, rods insert, OLED `TRIP: MANUAL SCRAM` | [ ] |
 | Reset button | D3 | Press after rods are in | Trip clears | [ ] |
 | Buzzer (active, via NPN) | D4 | Trip; approach a warning | Sounds on trip until reset; short chirp on warning | [ ] |
@@ -20,12 +20,12 @@
 | Yellow LED | D6 | Approach a setpoint | On during warning | [ ] |
 | Red LED | D7 | Trip | On while tripped | [ ] |
 | Blue LED | D12 | Raise rods to critical | On while critical | [ ] |
-| Servo | D9 | Turn rod pot; SCRAM | Follows rod 0–180°; full insertion on SCRAM | [ ] |
+| Servo | D9 | Turn rod pot; SCRAM | Follows `rod:` slowly (0–100 % = 0–180°); full insertion on SCRAM | [ ] |
 | OLED (I2C) | A4 SDA / A5 SCL, addr 0x3C | Power up; trip | Five lines; line 5 inverted while tripped | [ ] |
 
 ## 3. Rod pot steadiness (D-07)
 
-- [ ] Knob at rest, plotter mode, watch `rod:` for 30 s: swing stays under 0.11 % of travel (≈ $0.02).
+- [ ] Knob at rest, plotter mode, watch `dem:` for 30 s: swing stays under 0.11 % of travel (≈ $0.02).
 - [ ] Secondary only: `rho_cents` steady (it also moves with temperature feedback).
 - Reference: +$0.2 ≈ 1.1 % of travel; full stroke ≈ 205 s.
 

@@ -26,6 +26,7 @@ static Reactor reactor;
 static Panel panel;
 static Display display;
 static const Readings* last = nullptr;
+static Inputs lastIn;  // pot values for the plotter line
 
 static OutputMode mode = MODE_PLOTTER;
 static bool overrideOn = false;
@@ -150,14 +151,17 @@ static void printReadings(const Readings& r) {
     sendValue(">rod:", 100.0f * r.rod, 1);
     sendValue(">SUR:", r.sur, 3);
   } else {
-    char p[24], rod[24], rho[24], T[24];
+    char p[24], rod[24], rho[24], T[24], dem[24], Tc[24];
     dtostrf(100.0f * r.n, 0, 2, p);
     dtostrf(100.0f * r.rod, 0, 1, rod);
     dtostrf(100.0f * r.rhoDollars, 0, 2, rho);
     dtostrf(r.T - 300.0f, 0, 2, T);
+    dtostrf(100.0f * lastIn.rodDemand, 0, 2, dem);
+    dtostrf(lastIn.Tcool - 300.0f, 0, 2, Tc);
     sendFormatted(buf, sizeof buf,
-                  snprintf(buf, sizeof buf, "P:%s,rod:%s,rho_cents:%s,T_minus_300:%s\r\n", p,
-                           rod, rho, T));
+                  snprintf(buf, sizeof buf,
+                           "P:%s,rod:%s,rho_cents:%s,T_minus_300:%s,dem:%s,Tc_minus_300:%s\r\n",
+                           p, rod, rho, T, dem, Tc));
   }
 }
 
@@ -188,6 +192,7 @@ void loop() {
     if (softReset) in.reset = true;
     softScram = softReset = false;
     if (in.reset) panel.acknowledge();
+    lastIn = in;
 
     const Readings& r = reactor.step(in, DT_S);
     if (r.trips != 0) overrideOn = false;  // a trip ends the test; reset returns to the pot
