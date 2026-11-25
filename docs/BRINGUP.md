@@ -45,5 +45,7 @@
 - [ ] Send `b` before tripping → `# error: b only while tripped`.
 - [ ] Send `s` to trip, then `b`.
 - [ ] Copy the line `# stepImplicit: X us per step (n = ...), draw: Y us`.
-- [ ] Budget: X + Y < 10000 us. Pass [ ]
-- [ ] Add a dated docs/LOG.md entry "Phase 3 hardware bring-up (HW-01..03)" with X, Y, pass/fail and any mitigation (1 MHz `clkDuring` in src/display.h, or drawing less often).
+- One OLED frame takes ≥ 23 ms at 400 kHz, so a single draw can never fit in one 10 ms step; the accumulator catches up afterwards. The budget is therefore:
+- [ ] Keeps real time: 20·X + Y < 200000 us (20 steps + 1 draw per 200 ms frame). Pass [ ]
+- [ ] SCRAM latency: Y < 40000 us (worst case a press waits for one draw + one step, < 50 ms). Pass [ ]
+- [ ] Add a dated docs/LOG.md entry "Phase 3 hardware bring-up (HW-01..03)" with X, Y, pass/fail and any mitigation (drawing less often, or a 1 MHz `clkDuring` in src/display.h if the module tolerates it).
