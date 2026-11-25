@@ -1,4 +1,4 @@
-// main.cpp - Arduino UNO R4 Minima reactor simulator firmware.
+// main.cpp - Arduino UNO R4 (Minima or WiFi) reactor simulator firmware.
 // Physics runs in fixed 10 ms steps from an accumulator; serial output at 10 Hz,
 // OLED at 5 Hz. Units: time s (ms for timers), power normalized, rho $ on serial.
 #include <Arduino.h>
@@ -38,7 +38,11 @@ static uint32_t lastMs = 0, accMs = 0, lastPrintMs = 0, lastDrawMs = 0;
 
 // Drops the line if the USB TX buffer can't take it whole; never waits on the host.
 static void sendLine(const char* buf, int len) {
-  if (len <= 0 || Serial.availableForWrite() < len) return;
+  if (len <= 0) return;
+  // R4 WiFi (NO_USB): Serial is a UART into the USB bridge, never stalls, and availableForWrite() is always 0.
+#ifndef NO_USB
+  if (Serial.availableForWrite() < len) return;
+#endif
   Serial.write(reinterpret_cast<const uint8_t*>(buf), len);
 }
 

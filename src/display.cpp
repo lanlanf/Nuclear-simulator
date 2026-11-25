@@ -23,7 +23,11 @@ static const char* stateText(const Readings& r, bool overrideOn) {
 }
 
 bool Display::begin() {
-  ok_ = oled_.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS);
+  // Adafruit begin() only fails on malloc; it never checks that the OLED ACKs.
+  Wire.begin();
+  Wire.beginTransmission(OLED_ADDRESS);
+  if (Wire.endTransmission() != 0) return false;
+  ok_ = oled_.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS, true, false);
   return ok_;
 }
 
@@ -51,9 +55,12 @@ void Display::draw(const Readings& r, bool overrideOn) {
   oled_.print("T ");
   oled_.print(r.T, 1);
   oled_.print("K per ");
-  if (fabsf(r.period) >= 1.0e4f) oled_.print("inf");
-  else oled_.print(static_cast<int>(r.period));
-  oled_.print('s');
+  if (fabsf(r.period) >= 1.0e4f) {
+    oled_.print("inf");
+  } else {
+    oled_.print(static_cast<int>(r.period));
+    oled_.print('s');
+  }
 
   oled_.setCursor(0, 36);
   oled_.print("SUR ");
