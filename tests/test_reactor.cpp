@@ -347,15 +347,67 @@ TEST_CASE("Override is a test mode: power and period trips are bypassed") {
   CHECK((r.step(in, 0.01f).trips & TRIP_HIGH_POWER) != 0);
 }
 
-TEST_CASE("Fast rod withdrawal trips on high power, not on a fault") {
+TEST_CASE("Rod stop: full withdrawal from power holds below the trips") {
   Reactor r;
   REQUIRE(r.init());
   Inputs in;
+  in.rodDemand = 1.0f;  // e.g. rod pot far off-centre at power-on
+  double maxN = 0.0;
+  uint8_t trips = 0;
+  float rod = 0.0f;
+  for (int i = 0; i < 60000; ++i) {
+    const Readings& out = r.step(in, 0.01f);
+    maxN = fmax(maxN, out.n);
+    trips |= out.trips;
+    rod = out.rod;
+  }
+  INFO("maxN " << maxN << " rod " << rod);
+  CHECK(trips == 0);
+  CHECK(maxN < 1.20);
+  CHECK(rod < 0.55f);
+}
+
+TEST_CASE("Rod stop blocks withdrawal, never insertion, while a warning is up") {
+  const Setpoints warnOnly = {10.0f, 1.0e9f, 0.0f, 1.05f, 325.0f, 30.0f};
+  Reactor r;
+  REQUIRE(r.init(defaultPlant(), warnOnly));
+  Inputs in;
+  in.Tcool = 280.0f;  // n settles at 1.33: power warning stays on
+  REQUIRE((runFor(r, in, 600.0).warn & WARN_POWER) != 0);
   in.rodDemand = 1.0f;
-  const Readings& out = runFor(r, in, 30.0);
-  CHECK(out.trips != 0);
-  CHECK((out.trips & (TRIP_HIGH_POWER | TRIP_SHORT_PERIOD)) != 0);
-  CHECK((out.trips & TRIP_FAULT) == 0);
+  CHECK(runFor(r, in, 10.0).rod == 0.5f);
+  in.rodDemand = 0.0f;
+  CHECK(runFor(r, in, 10.0).rod < 0.46f);
+}
+
+TEST_CASE("Cold startup: rod pot straight to 0.5, rod stop paces it to full power") {
+  Reactor r;
+  REQUIRE(r.init());
+  Inputs in;
+  in.scram = true;
+  r.step(in, 0.01f);
+  in.scram = false;
+  in.rodDemand = 0.0f;
+  runFor(r, in, 3000.0);
+  in.reset = true;
+  REQUIRE(r.step(in, 0.01f).trips == 0);
+  in.reset = false;
+  REQUIRE(runFor(r, in, 300.0).n < 1.0e-4f);
+
+  in.rodDemand = 0.5f;
+  double minPeriod = PERIOD_INF;
+  uint8_t trips = 0;
+  float n = 0.0f;
+  for (int i = 0; i < 180000; ++i) {
+    const Readings& out = r.step(in, 0.01f);
+    if (out.period > 0.0f) minPeriod = fmin(minPeriod, out.period);
+    trips |= out.trips;
+    n = out.n;
+  }
+  INFO("minPeriod " << minPeriod << " final n " << n);
+  CHECK(trips == 0);
+  CHECK(minPeriod > 10.0);
+  CHECK(n == doctest::Approx(1.0).epsilon(0.02));
 }
 
 TEST_CASE("TEST-04 tryReset refuses while a condition is present") {

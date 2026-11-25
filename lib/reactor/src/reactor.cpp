@@ -45,7 +45,9 @@ const Readings& Reactor::step(const Inputs& in, float h) {
     rod_ = moveRod(rod_, 0.0f, pp_.scramSpeed, h);
     safety_ = moveRod(safety_, 0.0f, pp_.scramSpeed, h);
   } else {
-    rod_ = moveRod(rod_, rodDemand, pp_.rodSpeed, h);
+    // Rod stop: no withdrawal while any warning (from the last step) is up; insertion always works.
+    const bool rodStop = r_.warn != 0 && rodDemand > rod_;
+    rod_ = moveRod(rod_, rodStop ? rod_ : rodDemand, pp_.rodSpeed, h);
     safety_ = moveRod(safety_, 1.0f, pp_.rodSpeed, h);
   }
 

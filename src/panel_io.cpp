@@ -16,8 +16,8 @@ static const uint8_t PIN_ROD_POT = A0;
 static const uint8_t PIN_COOL_POT = A1;
 
 static const float POT_EMA = 0.1f;
-static const float TCOOL_MIN = 280.0f;  // coolant pot range (K), 290 K at mid-scale
-static const float TCOOL_SPAN = 20.0f;
+static const float TCOOL_MIN = 285.0f;  // coolant pot range (K), 290 K at mid-scale; 284 K would trip at power
+static const float TCOOL_SPAN = 10.0f;
 static const uint32_t DEBOUNCE_MS = 30;
 
 static volatile bool scramPressed = false;

@@ -12,7 +12,7 @@
 | Element | Pin | Action | Expected | Pass |
 |---|---|---|---|---|
 | Rod pot | A0 | Turn full range, then back to centre | Plotter `dem:` goes 0 → 100 smoothly (`rod:` only follows at 205 s per stroke) | [ ] |
-| Coolant pot | A1 | Turn full range | Plotter `Tc_minus_300:` goes −20 → 0 | [ ] |
+| Coolant pot | A1 | Turn full range | Plotter `Tc_minus_300:` goes −15 → −5 | [ ] |
 | SCRAM button | D2 | Press | Red LED on, rods insert, OLED `TRIP: MANUAL SCRAM` | [ ] |
 | Reset button | D3 | Press after rods are in | Trip clears | [ ] |
 | Buzzer (active, via NPN) | D4 | Trip; approach a warning | Sounds on trip until reset; short chirp on warning | [ ] |

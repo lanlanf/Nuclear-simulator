@@ -59,6 +59,8 @@ MUTATIONS = [  # id, file, old, new
      "if (!isValid(plant)) {\n    latched_ = 0;\n    return false;\n  }"),
     ("M31", R, " + feedback(dT_, pp_)", " - feedback(dT_, pp_)"),
     ("M32", K, "float num = k.n + hs * S;", "float num = k.n;"),
+    ("M33", R, "rodStop ? rod_ : rodDemand", "rodDemand"),
+    ("M34", R, "r_.warn != 0 && rodDemand > rod_", "r_.warn != 0"),
 ]
 
 
