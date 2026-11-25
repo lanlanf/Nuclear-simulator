@@ -54,12 +54,12 @@ $$\frac{dn}{dt}=\frac{\rho-\beta}{\Lambda}n+\sum_{i=1}^{6}\lambda_iC_i+S,\qquad
 
 $$\rho_{\text{rod}}(x)=\rho_w\left[\frac{x}{H}-\frac{1}{2\pi}\sin\frac{2\pi x}{H}\right]-\rho_{\text{crit}}$$
 
-- $x/H = \text{pot}/1023$, smoothed with an exponential moving average (EMA).
-- Total worth $\rho_w\approx \$2.2$.
-- Choose $\rho_{\text{crit}}$ so the reactor is critical at about 50 % withdrawn. Full withdrawal then reaches just past prompt critical, which is the danger demo.
-- **Rate-limit rod motion** (for example 2 %/s, like a real rod drive). Then a fast pot twist can't step in a dollar of reactivity instantly. Real plants do this, and so does pyReactor [P2]. DOE says maximum rod speed is limited to soften a continuous-withdrawal accident [R5].
+- $x/H = \text{pot}/16383$ (14-bit ADC on the R4), smoothed with an exponential moving average (EMA).
+- Total worth $\rho_w = \$9$. The first draft used \$2.2; the retune raised it so a cold core can't go critical with the rod in (see LOG.md, 2026-11-20).
+- Choose $\rho_{\text{crit}}$ so the reactor is critical at 50 % withdrawn at full power. Full withdrawal would add +\$4.5, well past prompt critical; the rate limit, the rod stop and the trips keep it from getting there.
+- **Rate-limit rod motion** (0.49 %/s as built, a 205 s full stroke, like a real rod drive). Then a fast pot twist can't step in a dollar of reactivity instantly. Real plants do this, and so does pyReactor [P2]. DOE says maximum rod speed is limited to soften a continuous-withdrawal accident [R5].
 - **The S shape is verified** [R5]: differential worth is bell-shaped (low at the ends, peak mid-core) and integral worth is an S. The sine formula is a smooth fit. Checked against DOE Example 3 data, every point is within 3% of total worth.
-- **Add a safety rod bank** worth about \$4, driven by the SCRAM button. DOE separates shim, regulating and safety rods. The regulating rod alone only reaches −\$1.1 (≈ −0.7% Δk/k), below DOE's typical 1–5% shutdown margin. Both banks in give −\$5.1 ≈ −3.3%. Bickel's FSAR example credits about 5% shutdown margin (k ≈ 0.95) [R8]. To match it, raise $\rho_s$ to about \$6.6 (total −\$7.7 ≈ −5%).
+- **Add a safety rod bank** worth about \$4, driven by the SCRAM button. DOE separates shim, regulating and safety rods. As built, the regulating rod alone gives −\$4.5 hot but only about −\$1.05 cold, because cooling adds +\$3.46. Both banks in give −\$8.5 hot ≈ −5.5 % Δk/k, just over the 5 % shutdown margin in Bickel's FSAR example (k ≈ 0.95) [R8].
 
 ### 2.4 Temperature feedback (one lumped node)
 
@@ -73,10 +73,10 @@ $$mc\frac{dT}{dt}=P-h(T-T_{\text{cool}}),\qquad
 | $T_{\text{cool}}$ | 290 | coolant temperature |
 | $h$ | 1/30 | gives a 30 K rise at $P=1$ |
 | $T_{\text{ref}}$ | 320 | equals $T_{\text{cool}}+P_0/h$, so feedback is zero at the starting state |
-| $mc$ | 5 | thermal time constant $mc/h\approx150$ s, so it is visible live |
-| $\alpha_T$ | −5 pcm/K | Demo value. DOE's worked example uses −8.2 pcm/°F (≈ −15 pcm/K) for a moderator coefficient [R5], so this is the same order of magnitude but gentler |
+| $mc$ | 0.25 | thermal time constant $mc/h=7.5$ s (first draft: 5, i.e. 150 s, which overshot badly) |
+| $\alpha_T$ | −75 pcm/K | Retuned from the first draft's −5 pcm/K. DOE's worked example uses −8.2 pcm/°F (≈ −15 pcm/K) for a moderator coefficient [R5]; −75 pcm/K is stronger but still inside the real MTC range below |
 
-**Expected result:** a +\$0.2 rod pull (130 pcm) settles about 26 K hotter and at about 1.9× power. This shows the reactor stabilizing itself.
+**Expected result:** a +\$0.2 rod pull (130 pcm) settles about 1.73 K hotter at about 1.058× power. This shows the reactor stabilizing itself.
 
 **Checked against Bickel, Module 10 [R8]:**
 
@@ -87,15 +87,15 @@ $$mc\frac{dT}{dt}=P-h(T-T_{\text{cool}}),\qquad
 |---|---|---|
 | Doppler (fuel) coefficient | Always negative. Diablo Canyon −1.4 to −2.6 pcm/°F (≈ −2.5 to −4.7 pcm/K) | Lumped into $\alpha_T$ |
 | Moderator temperature coefficient | Example −25 pcm/°F (≈ −45 pcm/K). A PWR's MTC can be slightly positive early in core life with high soluble boron | Lumped into $\alpha_T$ |
-| MTC typical range | 0 to −80 pcm/°C (= pcm/K). It must be non-positive at significant power (NRC SRP 4.3) [R9][R10] | −5 pcm/K is inside it |
-| Total power coefficient | Diablo Canyon −11 to −15 pcm/% power early in life, −20 to −31 late in life | −1.5 pcm/% power |
-| Power defect, 0 → 100% | About 2000–2250 pcm (≈ \$3) | 150 pcm (≈ \$0.23) |
-| Fuel temperature lag | $\tau_f\approx$ 3–5 s | One node, 150 s |
+| MTC typical range | 0 to −80 pcm/°C (= pcm/K). It must be non-positive at significant power (NRC SRP 4.3) [R9][R10] | −75 pcm/K is inside it |
+| Total power coefficient | Diablo Canyon −11 to −15 pcm/% power early in life, −20 to −31 late in life | −22.5 pcm/% power |
+| Power defect, 0 → 100% | About 2000–2250 pcm (≈ \$3) | 2250 pcm (≈ \$3.46) |
+| Fuel temperature lag | $\tau_f\approx$ 3–5 s | One node, 7.5 s |
 
-- **The demo is deliberately about 10× gentler.** A real \$3 power defect is more than the \$2.2 rod worth, so the rod could never bring the reactor to full power. Real PWRs also use soluble boron to cover it. Say this in the report.
-- **Something you can show:** at zero power the core is 30 K cooler, which adds +150 pcm. The reactor therefore goes critical at about 45% withdrawn during startup, compared with 50% at full power.
-- **Overcooling demo** (use the optional coolant pot as $T_{\text{cool}}$): lower $T_{\text{cool}}$ by 10 K with the rod fixed. The colder core gains reactivity, so power rises until $T$ is back at $T_{\text{ref}}$, at $P=1+10/30\approx1.33$. This is why the MTC has a *lower* limit, typically about −80 pcm/°C: in a main steam line break the coolant cools quickly, and a strongly negative MTC turns that into a large positive reactivity insertion [R9].
-- **Expected dynamics** (slide 17): a reactor at power is highly damped. After a small step, power rises, overshoots, then settles where the net $\rho=0$. My rough frequency-response estimate predicted 10–20% overshoot and about 10 min to settle. The SciPy reference and the C++ model both show a much larger first peak. A +\$0.2 pull reaches $n\approx3.4$ about 60 s in, which is ~80% above the final 1.87. Power is then within 2% of its final value by about 9 min, with no sustained ringing. On the real panel, a +\$0.2 pull from full power therefore trips on high power (1.20).
+- **The retuned demo has a realistic power defect.** The first draft (−5 pcm/K, 150 pcm defect) was about 10× gentler than a real plant. The retune matched real feedback, so the rod worth went from \$2.2 to \$9 to cover the \$3.46 defect. Real PWRs cover part of it with soluble boron. Say this in the report.
+- **Something you can show:** at zero power the core is 30 K cooler, which adds +\$3.46. The reactor therefore goes critical at about 28 % withdrawn during a cold startup, compared with 50 % at full power.
+- **Overcooling demo** (use the coolant pot as $T_{\text{cool}}$): lower $T_{\text{cool}}$ by 10 K with the rod fixed. The colder core gains reactivity, so power rises until $T$ is back at $T_{\text{ref}}$, at $P=1+10/30\approx1.33$. The panel's coolant pot stops at −5 K ($P\approx1.17$), below the 1.20 trip; `sim_cli` and the tests show the full 10 K. This is why the MTC has a *lower* limit, typically about −80 pcm/°C: in a main steam line break the coolant cools quickly, and a strongly negative MTC turns that into a large positive reactivity insertion [R9].
+- **Expected dynamics** (slide 17): a reactor at power is highly damped. After a small step, power rises, overshoots, then settles where the net $\rho=0$. The first draft (150 s lag) overshot about 80 %. As built (7.5 s lag), a +\$0.2 pull overshoots about 11 % at 2.3 s and settles at $n\approx1.058$ with no sustained ringing; on the panel it stays below the 1.20 trip.
 - **Optional upgrade:** use Bickel's two-node model, with a fast fuel node ($\tau_f\approx4$ s, Doppler) and a slow coolant node (MTC).
 
 ### 2.5 Behaviors to demonstrate [R2][R6]
@@ -195,13 +195,13 @@ Ordered from Amazon. Prices checked 2026-11-21 (Black Friday).
 
 | Pin | Function | Reason |
 |---|---|---|
-| D2 | SCRAM button (`INPUT_PULLUP`, `FALLING` interrupt) | Only D2 and D3 support interrupts [H5] |
+| D2 | SCRAM button (`INPUT_PULLUP`, `FALLING` interrupt) | Interrupt-capable on both R3 and R4 [H5] |
 | D3 | Reset/acknowledge button | Interrupt-capable |
 | D4 | Active buzzer (or D8 with `tone()` for a passive buzzer) | Avoids the Timer2 conflict on D3 and D11 [H8] |
 | D5, D6 | Green and yellow LEDs (PWM) | |
 | D7, D12 | Red (SCRAM) and blue (critical) LEDs | |
 | D9 | Servo signal | The Servo library disables PWM on D9 and D10 [H7] |
-| A0 / A1 | Rod potentiometer / coolant potentiometer | 10-bit ADC, 0–1023 [H9] |
+| A0 / A1 | Rod potentiometer / coolant potentiometer | Read at 14 bits on the R4, 0–16383 (R3: 10-bit, 0–1023) [H9] |
 | A4 / A5 | SDA / SCL for the OLED or LCD | [H4] |
 
 ### 4.4 Electrical design (put this in the report; it is the E&M part of ENGR 217)
@@ -209,7 +209,7 @@ Ordered from Amazon. Prices checked 2026-11-21 (Black Friday).
 - **LED resistor:** $R=(V_{cc}-V_f)/I$.
   - R3: $(5-2)/220\approx13.6$ mA.
   - R4: use $1\text{ kΩ}\to3$ mA to stay under the 8 mA pin limit [H3].
-- **Potentiometer:** works as a voltage divider, $V_{\text{wiper}}=5\cdot\text{ADC}/1023$.
+- **Potentiometer:** works as a voltage divider, $V_{\text{wiper}}=5\cdot\text{ADC}/16383$ at 14 bits.
 - **Servo power:**
   - Use a separate 5 V supply and tie the grounds together [H7]. The R4 manual says never to power servos from the board's 5 V pin [H4].
   - The capacitor absorbs current spikes. Without it, a brownout can reset the board, which looks like a phantom SCRAM.
@@ -230,7 +230,7 @@ loop():
   every 100 ms: Serial.print("P:..,rho$:..,T:..,SUR:..")  → Serial Plotter [H10]
 ```
 
-**State machine:** SHUTDOWN → STARTUP → CRITICAL/POWER → TRIPPED (latched) → RESET (allowed only with rods fully inserted).
+**State machine (as built):** the board powers up at full power (critical, rod at 50 %, no trip latched). POWER → TRIPPED (latched) → RESET (allowed only with rods and rod pot fully in) → STARTUP → CRITICAL/POWER. A rod stop blocks withdrawal while any warning is up.
 
 **Serial output:** 115200 baud. Use `label:value` pairs separated by commas [H10]. Also add a CSV mode (`t,n,rho,T`) for validation.
 
@@ -245,7 +245,7 @@ loop():
 | V5 | Reference comparison | Log Arduino CSV and solve the same 7 ODEs with `scipy.integrate.solve_ivp(method="Radau", rtol=1e-8)`. Plot the error. |
 | V6 | Step-size sweep | Halve Δt and show first-order convergence |
 | V7 | Explicit Euler with Δt > 31 ms (e.g. 40 ms) | Shows the instability on purpose. Good figure for the report. |
-| V8 | Temperature feedback | +\$0.2 settles at the predicted ΔT ≈ 26 K with net ρ → 0; first peak ~80% above final (n ≈ 3.4 at 60 s), within 2% by ~9 min, no sustained ringing [R8] |
+| V8 | Temperature feedback | +\$0.2 settles at the predicted ΔT ≈ 1.73 K, $n\approx1.058$, with net ρ → 0; first peak ~11 % above final at ~2.3 s, within 2 % by 540 s, no sustained ringing [R8] |
 
 ## 7. Build phases
 
@@ -290,7 +290,7 @@ loop():
 - Rod position readout
 - High-power, short-period and manual trips
 - Latched annunciators that need an acknowledge
-- Rod-withdrawal interlock during a short period
+- Rod-withdrawal interlock during a short period (built as the rod stop)
 
 **What makes this stand out:**
 1. The solver runs on the board, not on a PC.

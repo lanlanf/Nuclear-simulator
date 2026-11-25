@@ -8,8 +8,8 @@ tests and for validation against a SciPy reference.
 
 Model: six-group point kinetics with Keepin U-235 data (Λ = 1e-4 s,
 β = 0.006502), solved with a closed-form backward-Euler step (h = 10 ms). There
-is an S-curve control rod worth $2.2 and a safety bank worth $4, plus a
-lumped fuel-temperature model with negative feedback. A protection system
+is an S-curve control rod worth $9 and a safety bank worth $4, plus a
+lumped fuel-temperature model with negative feedback (−75 pcm/K). A protection system
 handles trips. See [docs/PLAN.md](docs/PLAN.md) and
 [docs/CODE-GUIDE.html](docs/CODE-GUIDE.html).
 
@@ -90,7 +90,7 @@ Full diagram with parts list: [docs/wiring.svg](docs/wiring.svg).
 | Pin | Part | Notes |
 |---|---|---|
 | A0 | Rod pot | Rod demand 0–1 |
-| A1 | Coolant pot | Coolant temperature 280–300 K (290 K at mid-scale) |
+| A1 | Coolant pot | Coolant temperature 285–295 K (290 K at mid-scale) |
 | D2 | SCRAM button | To GND, interrupt |
 | D3 | Reset button | To GND, debounced 30 ms |
 | D4 | Buzzer | Sounds on a trip until reset; short chirp on a warning |
@@ -98,7 +98,7 @@ Full diagram with parts list: [docs/wiring.svg](docs/wiring.svg).
 | D6 | Yellow LED | Warning (power > 105 %, T > 325 K or period < 30 s) |
 | D7 | Red LED | Tripped |
 | D12 | Blue LED | Critical (steady state) |
-| D9 | Servo | Rod position |
+| D9 | Servo | Rod position (600–2400 µs pulse) |
 | SDA/SCL | SSD1306 OLED | I²C address 0x3C |
 
 R4 pins supply at most 8 mA: use 1 kΩ (or two 220 Ω in series) on each LED and
@@ -111,7 +111,7 @@ that supply's ground to the Arduino's.
 | Command | Action |
 |---|---|
 | `m p` / `m c` / `m t` | Output mode: Serial Plotter / CSV / Teleplot |
-| `r <dollars>` | Test mode: replace rod reactivity with a fixed value |
+| `r <dollars>` | Test mode: replace rod reactivity with a fixed value (refused while tripped) |
 | `x` | Leave test mode |
 | `s` | SCRAM |
 | `z` | Reset |
@@ -121,6 +121,10 @@ Test mode (`r`) is a physics-test aid. It bypasses the high-power,
 high-temperature and short-period trips, but not prompt-critical, fault or
 manual SCRAM. It ends on any trip.
 
+Lines longer than 31 characters are rejected with `# error: command too long`.
+The plotter mode prints `P`, `rod`, `rho_cents`, `T_minus_300`, plus the raw
+pot readings `dem` (rod demand, %) and `Tc_minus_300` (coolant, K − 300).
+
 ### Protection
 
 Trips latch and insert all rods. They are high power (> 120 %), high
@@ -128,6 +132,13 @@ temperature (> 330 K), short period (< 10 s), prompt critical (ρ ≥ $1),
 numerical fault, and manual SCRAM. A reset clears the latch only when no trip
 condition remains and the rods are fully in. That includes the rod pot, so
 turn it fully down before you press reset.
+
+Rod stop: while any warning is up (power > 105 %, T > 325 K or period < 30 s),
+the rod cannot be withdrawn; insertion always works. This paces a fast pull so
+it holds below the trips, and lets a cold startup go straight to mid-scale.
+
+Known limit: the board boots at full power with no trip latched. If it resets
+mid-demo (reboot or brownout), press SCRAM.
 
 Trip bits: 1 manual, 2 high power, 4 high temperature, 8 short period,
 16 prompt critical, 32 fault.

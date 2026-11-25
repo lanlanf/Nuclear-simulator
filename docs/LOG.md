@@ -1,5 +1,56 @@
 # Project log
 
+## 2026-11-25: validation fixes (before bring-up)
+
+A deep review before wiring found ten issues. All are fixed; 49/49 test cases
+pass and both firmware envs build with no warnings.
+
+**Firmware**
+
+- **No serial output on the R4 WiFi.** There `Serial` is a UART into the USB
+  bridge, and `availableForWrite()` always returns 0, so every line was dropped.
+  The check is now skipped under `NO_USB`.
+- **OLED presence.** Adafruit `begin()` only fails on malloc. The firmware now
+  probes 0x3C for an I²C ACK first, so a missing OLED is reported.
+- **Period label** shows `inf` near critical instead of a huge number.
+- **Plotter** adds `dem` (rod pot, %) and `Tc_minus_300` (coolant pot) so the
+  bring-up pot checks don't need a meter.
+- **Coolant pot** is now 285–295 K (was 280–300 K). The −10 K end tripped at power.
+- **Servo** pulse range is 600–2400 µs. The 544 µs default can stall an SG90 on
+  its end stop.
+- **Serial:** `r` while tripped prints `# error: r ignored while tripped, reset
+  first`. Lines over 31 characters print `# error: command too long` and are
+  not executed (before, the truncated text ran).
+
+**Rod stop (new protection feature)**
+
+While any warning is up (power > 1.05, T > 325 K, period < 30 s), `Reactor::step`
+blocks rod withdrawal. Insertion always works. This is the "rod withdrawal
+block" from real plants.
+
+- A full rod pull from power used to trip on high power. It now holds below
+  the trips (rod < 0.55, max n < 1.2).
+- A power-on pot offset of ±50 % no longer trips.
+- **Startup is corrected.** The 2026-11-20 claim "startup: no trips, n = 0.619"
+  predates the retune. With the retuned plant, the old startup schedule tripped
+  SHORT_PERIOD at 606.7 s. `sim_cli --scenario startup` now turns the rod pot
+  straight to 0.5 and lets the rod stop pace it: no trips, minimum period
+  18.9 s, n ≥ 0.95 at 381 s, final n 1.000, T 320.0 K. A regression test covers it.
+- Mutants M33 and M34 (rod stop removed or made to block insertion) are killed.
+
+**Docs and plan**
+
+- HW-03 pass rule: the board keeps real time if 20·X + Y < 200 000 µs per
+  2 s window, and SCRAM latency is Y < 40 000 µs (< 50 ms). One OLED frame takes
+  at least 23 ms at 400 kHz, so the old rule could not pass.
+- **Known limit:** the board boots at full power with no trip latched. If it
+  resets mid-demo (reboot or brownout), press SCRAM. BRINGUP.md §5 says so.
+- **Correction to the retune notes:** $0.2 is about 1.1 % of pot travel, which
+  is about 180 counts at 14 bits (not 11 counts at 10 bits).
+- README, PLAN.md/.html and CODE-GUIDE.html now use the as-built numbers: $9
+  rod, −75 pcm/K, τ 7.5 s, shutdown margin −$8.5 hot, and a +$0.2 pull that
+  peaks about 11 % high at 2.3 s and settles at n 1.058, ΔT 1.73 K.
+
 ## 2026-11-21: parts list finalized
 
 **Board:** ELEGOO UNO R4 WiFi (starter kit). It has the same RA4M1 chip as the
