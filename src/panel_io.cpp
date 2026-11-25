@@ -34,7 +34,7 @@ void Panel::begin() {
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
   }
-  servo_.attach(PIN_SERVO);
+  servo_.attach(PIN_SERVO, 600, 2400);  // 544 us default can stall an SG90 on its end stop
   analogReadResolution(14);
   rodPot_ = readPot(PIN_ROD_POT);
   coolPot_ = readPot(PIN_COOL_POT);

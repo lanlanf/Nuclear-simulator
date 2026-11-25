@@ -39,6 +39,8 @@
 
 - [ ] Trip, hold SCRAM down, press reset → stays tripped.
 - [ ] Release SCRAM, press reset → trip clears.
+- [ ] Servo at full insertion (after SCRAM) is quiet: no buzzing or humming against the end stop.
+- Known limit: a reboot or brownout restarts at full power with no trip latched. If the board resets mid-demo, press SCRAM.
 
 ## 6. HW-03 timing
 
