@@ -35,6 +35,7 @@ static bool softScram = false;
 static bool softReset = false;
 static char line[32];
 static uint8_t lineLen = 0;
+static bool lineTooLong = false;
 static uint32_t lastMs = 0, accMs = 0, lastPrintMs = 0, lastDrawMs = 0;
 
 // Drops the line if the USB TX buffer can't take it whole; never waits on the host.
@@ -97,6 +98,10 @@ static void handleCommand(const char* cmd) {
       sendText("# error: r needs a finite number in [-10, 10] dollars\r\n");
       return;
     }
+    if (last != nullptr && last->trips != 0) {
+      sendText("# error: r ignored while tripped, reset first\r\n");
+      return;
+    }
     rhoOverride = d * totalBeta(keepinU235());
     overrideOn = true;
   } else if (!strcmp(cmd, "x")) {
@@ -121,10 +126,14 @@ static void handleSerialCommands() {
     const char c = static_cast<char>(Serial.read());
     if (c == '\n' || c == '\r') {
       line[lineLen] = '\0';
-      handleCommand(line);
+      if (lineTooLong) sendText("# error: command too long\r\n");
+      else handleCommand(line);
       lineLen = 0;
+      lineTooLong = false;
     } else if (lineLen < sizeof(line) - 1) {
       line[lineLen++] = c;
+    } else {
+      lineTooLong = true;
     }
   }
 }
