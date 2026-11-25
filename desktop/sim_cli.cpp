@@ -35,16 +35,6 @@ static float rodFor(float rho, const PlantParams& pp) {
   return 0.5f * (lo + hi);
 }
 
-// Rod demand during the startup: 5 % steps to 40 %, then smaller steps near critical.
-static float startupDemand(double t) {
-  if (t >= 1500.0) return 0.48f;
-  if (t >= 1300.0) return 0.46f;
-  if (t >= 1100.0) return 0.44f;
-  if (t >= 900.0) return 0.42f;
-  const int k = static_cast<int>(t / 100.0);
-  return 0.05f * static_cast<float>(k > 8 ? 8 : k);
-}
-
 int main(int argc, char** argv) {
   const char* scenario = nullptr;
   const char* method = "implicit";
@@ -159,6 +149,7 @@ int main(int argc, char** argv) {
     nRef = r->n;
     row(0.0, r->rhoDollars, r->n, r->T, r->period, r->rod, r->trips);
     printf(",1\n");
+    in.rodDemand = 0.5f;  // one knob turn; the rod stop paces the approach
   } else {
     const Readings& r = reactor.step(in, 0.0f);
     row(0.0, r.rhoDollars, r.n, r.T, r.period, r.rod, r.trips);
@@ -166,8 +157,7 @@ int main(int argc, char** argv) {
   }
   for (long i = 1; i <= steps; ++i) {
     const double t = static_cast<double>(i) * static_cast<double>(dt);
-    if (startup) in.rodDemand = startupDemand(t);
-    else in.scram = t >= 1.0 && t < 1.0 + static_cast<double>(dt);
+    if (!startup) in.scram = t >= 1.0 && t < 1.0 + static_cast<double>(dt);
     const Readings& r = reactor.step(in, dt);
     if (i % every == 0) {
       row(t, r.rhoDollars, r.n, r.T, r.period, r.rod, r.trips);
